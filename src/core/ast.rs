@@ -1,8 +1,8 @@
+use crate::core::value::Value;
+
 #[derive(Debug, PartialEq)]
 pub enum AstNode {
-  String(String),
-  Number(f64),
-  Bool(bool),
+  Literal(Value),
 
   Unary(UOpType, Box<AstNode>),
   Binary(BOpType, Box<AstNode>, Box<AstNode>),

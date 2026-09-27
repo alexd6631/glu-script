@@ -6,6 +6,7 @@ use crate::core::{
   ast::{AstNode, BOpType, LOpType, UOpType},
   parser::Parser,
   scanner::{Scanner, TokenType},
+  value::Value,
   writer::Writers,
 };
 
@@ -32,11 +33,25 @@ impl<'a> Compiler<'a> {
     self.parse_precedence(Precedence::Assignment)
   }
 
-  fn number(&self, _can_assign: bool) -> AstNode {
-    let prev = self.parser.get_previous();
-    let value: RawNumber = prev.lexeme.parse().unwrap();
+  fn literal(&self, _can_assign: bool) -> AstNode {
+    let token = self.parser.get_previous();
+    let token_type = token.kind;
+    let lexeme = token.lexeme;
 
-    AstNode::Number(value)
+    match token_type {
+      TokenType::False => AstNode::Literal(Value::Bool(false)),
+      TokenType::True => AstNode::Literal(Value::Bool(true)),
+      TokenType::Nil => AstNode::Literal(Value::Nil),
+      TokenType::String => {
+        let s = &lexeme[1..lexeme.len() - 1];
+        AstNode::Literal(Value::String(s.into()))
+      }
+      TokenType::Number => {
+        let value: RawNumber = lexeme.parse().unwrap();
+        AstNode::Literal(Value::Number(value))
+      }
+      _ => panic!("unreachable"),
+    }
   }
 
   fn grouping(&mut self, _can_assign: bool) -> AstNode {
@@ -216,12 +231,12 @@ static DEFAULT_RULE: ParseRule = _rule!((None, None, None));
 fn build_rules() -> HashMap<TokenType, ParseRule> {
   _rules! {
       LeftParen => (grouping, None, Call) // TODO implement call
-      Number => (number, None, None)
-      // Nil => (literal, None, None)
-      // True => (literal, None, None)
-      // False => (literal, None, None)
+      Number => (literal, None, None)
+      Nil => (literal, None, None)
+      True => (literal, None, None)
+      False => (literal, None, None)
       // Identifier => (variable, None, None)
-      // String => (string, None, None)
+      String => (literal, None, None)
 
       BangEqual => (None, binary, Equality)
       EqualEqual => (None, binary, Equality)
@@ -250,10 +265,11 @@ mod tests {
   use crate::core::{
     ast::{AstNode, BOpType, LOpType, UOpType},
     compiler::Compiler,
+    value::Value,
   };
 
   fn num(n: f64) -> AstNode {
-    AstNode::Number(n)
+    AstNode::Literal(Value::Number(n))
   }
 
   fn unary(op: UOpType, node: AstNode) -> AstNode {
@@ -266,6 +282,10 @@ mod tests {
 
   fn log(op: LOpType, lhs: AstNode, rhs: AstNode) -> AstNode {
     AstNode::Logical(op, Box::new(lhs), Box::new(rhs))
+  }
+
+  fn str(s: &str) -> AstNode {
+    AstNode::Literal(Value::String(s.into()))
   }
 
   #[test]
@@ -394,5 +414,45 @@ mod tests {
       node,
       log(LOpType::Or, log(LOpType::And, num(1.0), num(2.0)), num(3.0))
     );
+  }
+
+  #[test]
+  fn test_literal_string() {
+    let mut c = Compiler::new("\"Hello\" + \" world\"");
+    let node = c.compile();
+
+    assert_eq!(node, bin(BOpType::Add, str("Hello"), str(" world")));
+  }
+
+  #[test]
+  fn test_literal_true() {
+    let mut c = Compiler::new("true");
+    let node = c.compile();
+
+    assert_eq!(node, AstNode::Literal(Value::Bool(true)));
+  }
+
+  #[test]
+  fn test_literal_false() {
+    let mut c = Compiler::new("false");
+    let node = c.compile();
+
+    assert_eq!(node, AstNode::Literal(Value::Bool(false)));
+  }
+
+  #[test]
+  fn test_literal_nil() {
+    let mut c = Compiler::new("nil");
+    let node = c.compile();
+
+    assert_eq!(node, AstNode::Literal(Value::Nil));
+  }
+
+  #[test]
+  fn test_literal_number() {
+    let mut c = Compiler::new("42.5");
+    let node = c.compile();
+
+    assert_eq!(node, num(42.5));
   }
 }

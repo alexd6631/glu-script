@@ -4,3 +4,4 @@ pub mod writer;
 pub mod compiler;
 pub mod ast;
 pub mod evaluator;
+pub mod value;
