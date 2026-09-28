@@ -6,4 +6,5 @@ pub enum Value {
   Bool(bool),
   Number(f64),
   String(Rc<str>),
+  List(Vec<Value>)
 }

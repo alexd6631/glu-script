@@ -699,5 +699,6 @@ if (!nativeBinding) {
 }
 
 module.exports = nativeBinding
+module.exports.testEvaluate = nativeBinding.testEvaluate
 module.exports.testParse = nativeBinding.testParse
 module.exports.testScan = nativeBinding.testScan

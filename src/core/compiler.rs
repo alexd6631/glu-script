@@ -116,6 +116,22 @@ impl<'a> Compiler<'a> {
     AstNode::Logical(ast_op_type, Box::new(lhs), Box::new(rhs))
   }
 
+  fn list(&mut self, _can_assign: bool) -> AstNode {
+    let mut items = vec![];
+    if !self.parser.check(TokenType::RightBracket) {
+      loop {
+        items.push(self.expression());
+        if !self.parser.matches(TokenType::Comma) {
+          break;
+        }
+      }
+    }
+
+    self.parser.consume(TokenType::RightBracket, "Expected ']'");
+
+    AstNode::List(items)
+  }
+
   fn parse_precedence(&mut self, precedence: Precedence) -> AstNode {
     self.parser.advance();
     let Some(prefix_rule) = get_rule(self.parser.get_previous().kind).prefix else {
@@ -257,6 +273,8 @@ fn build_rules() -> HashMap<TokenType, ParseRule> {
       Or => (None, logical, Or)
 
       // Dot => (None, dot, Call)
+
+      LeftBracket => (list, None, None)
   }
 }
 
@@ -267,6 +285,10 @@ mod tests {
     compiler::Compiler,
     value::Value,
   };
+
+  fn bool(b: bool) -> AstNode {
+    AstNode::Literal(Value::Bool(b))
+  }
 
   fn num(n: f64) -> AstNode {
     AstNode::Literal(Value::Number(n))
@@ -454,5 +476,16 @@ mod tests {
     let node = c.compile();
 
     assert_eq!(node, num(42.5));
+  }
+
+  #[test]
+  fn test_literal_list() {
+    let mut c = Compiler::new("([42.5, \"hello\", false, true]");
+    let node = c.compile();
+
+    assert_eq!(
+      node,
+      AstNode::List(vec![num(42.5), str("hello"), bool(false), bool(true)])
+    );
   }
 }

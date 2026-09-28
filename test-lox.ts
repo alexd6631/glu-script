@@ -11,4 +11,6 @@ import m from './index.js';
 // sample()
 // `);
 
-m.testParse("2 * (3 + 1)")
+// m.testScan('[1, 2, 3]')
+m.testEvaluate('[1 +1 , 2 + 2, 3 * 4, [1, 2*2, 3*3]]')
+// m.testEvaluate("2 * (3 + 1)")
