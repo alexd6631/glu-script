@@ -10,6 +10,7 @@ impl Evaluator {
     match node {
       AstNode::Literal(l) => Ok(l.clone()),
       AstNode::List(items) => Self::list(items),
+      AstNode::Block(items) => Self::block(items),
       AstNode::Binary(op_type, left, right) => Self::binary(*op_type, left, right),
       AstNode::Logical(op_type, left, right) => Self::logical(*op_type, left, right),
       AstNode::Unary(op_type, ast_node) => Self::unary(*op_type, ast_node),
@@ -76,6 +77,16 @@ impl Evaluator {
   fn list(nodes: &[AstNode]) -> Result<Value, String> {
     let values: Result<Vec<Value>, String> = nodes.iter().map(Self::evaluate).collect();
     Ok(Value::List(values?))
+  }
+
+  fn block(nodes: &[AstNode]) -> Result<Value, String> {
+    let mut result = Value::Nil;
+
+    for node in nodes {
+      result = Self::evaluate(node)?;
+    }
+
+    Ok(result)
   }
 }
 

@@ -4,6 +4,7 @@ use crate::core::value::Value;
 pub enum AstNode {
   Literal(Value),
   List(Vec<AstNode>),
+  Block(Vec<AstNode>),
 
   Unary(UOpType, Box<AstNode>),
   Binary(BOpType, Box<AstNode>, Box<AstNode>),

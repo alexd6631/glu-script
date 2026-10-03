@@ -132,6 +132,22 @@ impl<'a> Compiler<'a> {
     AstNode::List(items)
   }
 
+  fn block(&mut self, _can_assign: bool) -> AstNode {
+    let mut items = vec![];
+    if !self.parser.check(TokenType::RightBrace) {
+      loop {
+        items.push(self.expression());
+        if !self.parser.matches(TokenType::Semicolon) {
+          break;
+        }
+      }
+    }
+
+    self.parser.consume(TokenType::RightBrace, "Expected '}'");
+
+    AstNode::Block(items)
+  }
+
   fn parse_precedence(&mut self, precedence: Precedence) -> AstNode {
     self.parser.advance();
     let Some(prefix_rule) = get_rule(self.parser.get_previous().kind).prefix else {
@@ -275,6 +291,7 @@ fn build_rules() -> HashMap<TokenType, ParseRule> {
       // Dot => (None, dot, Call)
 
       LeftBracket => (list, None, None)
+      LeftBrace => (block, None, None)
   }
 }
 
@@ -487,5 +504,13 @@ mod tests {
       node,
       AstNode::List(vec![num(42.5), str("hello"), bool(false), bool(true)])
     );
+  }
+
+  #[test]
+  fn test_block() {
+    let mut c = Compiler::new("{ 1 + 2; 2 + 2 }");
+    let node = c.compile();
+
+    dbg!(node);
   }
 }
