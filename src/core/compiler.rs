@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::OnceLock};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use crate::core::{
-  ast::{AstNode, BOpType, LOpType, UOpType},
+  ast::{AstNode, AstObjectKey, BOpType, LOpType, UOpType},
   parser::Parser,
   scanner::{Scanner, TokenType},
   value::Value,
@@ -130,6 +130,85 @@ impl<'a> Compiler<'a> {
     self.parser.consume(TokenType::RightBracket, "Expected ']'");
 
     AstNode::List(items)
+  }
+
+  fn block_or_object_literal(&mut self, _can_assign: bool) -> AstNode {
+    if self.look_object_literal_ahead() {
+      self.object_literal(_can_assign)
+    } else {
+      self.block(_can_assign)
+    }
+  }
+
+  fn look_object_literal_ahead(&self) -> bool {
+    let mut lookahead_parser = self.parser.clone();
+
+    // Heuristic to check if we branch to object literal parsing instead of a block
+    // We check for one of those patterns, to match a first computed or literal property :
+    // { [ ... ] :
+    // { <IDENTIFIER | STRING> :
+
+    if lookahead_parser.matches(TokenType::LeftBracket) {
+      let mut level = 1;
+      while !self.parser.check(TokenType::Eof) {
+        if lookahead_parser.matches(TokenType::RightBracket) {
+          level -= 1;
+          if level == 0 {
+            return lookahead_parser.matches(TokenType::Colon);
+          }
+        } else {
+          if lookahead_parser.check(TokenType::LeftBracket) {
+            level += 1;
+          }
+          lookahead_parser.advance();
+        }
+      }
+      false
+    } else {
+      (lookahead_parser.matches(TokenType::Identifier)
+        || lookahead_parser.matches(TokenType::String))
+        && lookahead_parser.matches(TokenType::Colon)
+    }
+  }
+
+  fn object_literal(&mut self, _can_assign: bool) -> AstNode {
+    let mut entries = vec![];
+
+    if !self.parser.check(TokenType::RightBrace) {
+      loop {
+        let key = if self.parser.matches(TokenType::Identifier) {
+          AstObjectKey::Literal(self.parser.get_previous().lexeme.into())
+        } else if self.parser.matches(TokenType::String) {
+          let lexeme = self.parser.get_previous().lexeme;
+
+          AstObjectKey::Literal(lexeme[1..lexeme.len() - 1].into())
+        } else if self.parser.matches(TokenType::LeftBracket) {
+          let key_expr = self.expression();
+          self
+            .parser
+            .consume(TokenType::RightBracket, "expected right bracket");
+          AstObjectKey::Computed(key_expr)
+        } else {
+          self
+            .parser
+            .error_at_current("expected string or identifier");
+          AstObjectKey::Literal("error".into())
+        };
+
+        self.parser.consume(TokenType::Colon, "expected :");
+        let value = self.expression();
+
+        entries.push((key, value));
+
+        if !self.parser.matches(TokenType::Comma) {
+          break;
+        }
+      }
+    }
+
+    self.parser.consume(TokenType::RightBrace, "Expected '}'");
+
+    AstNode::Object(entries)
   }
 
   fn block(&mut self, _can_assign: bool) -> AstNode {
@@ -291,14 +370,14 @@ fn build_rules() -> HashMap<TokenType, ParseRule> {
       // Dot => (None, dot, Call)
 
       LeftBracket => (list, None, None)
-      LeftBrace => (block, None, None)
+      LeftBrace => (block_or_object_literal, None, None)
   }
 }
 
 #[cfg(test)]
 mod tests {
   use crate::core::{
-    ast::{AstNode, BOpType, LOpType, UOpType},
+    ast::{AstNode, AstObjectKey, BOpType, LOpType, UOpType},
     compiler::Compiler,
     value::Value,
   };
@@ -511,6 +590,44 @@ mod tests {
     let mut c = Compiler::new("{ 1 + 2; 2 + 2 }");
     let node = c.compile();
 
+    assert_eq!(
+      node,
+      AstNode::Block(vec![
+        bin(BOpType::Add, num(1.0), num(2.0)),
+        bin(BOpType::Add, num(2.0), num(2.0))
+      ])
+    );
+  }
+
+  #[test]
+  fn test_object_literal() {
+    let mut c =
+      Compiler::new(r#"{ "aaaa": 1, b: true, c: [1, 2, 3], ["Hello" + "world"]: "test"}"#);
+
+    let node = c.compile();
+
+    assert_eq!(
+      node,
+      AstNode::Object(vec![
+        (AstObjectKey::Literal("aaaa".into()), num(1.0)),
+        (AstObjectKey::Literal("b".into()), bool(true)),
+        (
+          AstObjectKey::Literal("c".into()),
+          AstNode::List(vec![num(1.0), num(2.0), num(3.0)])
+        ),
+        (
+          AstObjectKey::Computed(bin(BOpType::Add, str("Hello"), str("world"))),
+          str("test")
+        ),
+      ])
+    );
+  }
+
+  #[test]
+  fn test_foo() {
+    let mut c = Compiler::new(r#"{ [[1, 2, 3]]: 32 }"#);
+
+    let node = c.compile();
     dbg!(node);
   }
 }

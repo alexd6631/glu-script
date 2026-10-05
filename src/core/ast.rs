@@ -1,9 +1,12 @@
+use std::rc::Rc;
+
 use crate::core::value::Value;
 
 #[derive(Debug, PartialEq)]
 pub enum AstNode {
   Literal(Value),
   List(Vec<AstNode>),
+  Object(Vec<(AstObjectKey, AstNode)>),
   Block(Vec<AstNode>),
 
   Unary(UOpType, Box<AstNode>),
@@ -11,6 +14,11 @@ pub enum AstNode {
   Logical(LOpType, Box<AstNode>, Box<AstNode>),
 
   Error,
+}
+#[derive(Debug, PartialEq)]
+pub enum AstObjectKey {
+  Literal(Rc<str>),
+  Computed(AstNode),
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]

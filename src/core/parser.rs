@@ -3,6 +3,7 @@ use crate::core::{
   writer::Writers,
 };
 
+#[derive(Clone)]
 pub struct Parser<'a> {
   scanner: Scanner<'a>,
   current: Option<Token<'a>>,

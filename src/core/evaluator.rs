@@ -1,5 +1,7 @@
+use std::collections::HashMap;
+
 use crate::core::{
-  ast::{AstNode, BOpType, LOpType, UOpType},
+  ast::{AstNode, AstObjectKey, BOpType, LOpType, UOpType},
   value::Value,
 };
 
@@ -10,6 +12,7 @@ impl Evaluator {
     match node {
       AstNode::Literal(l) => Ok(l.clone()),
       AstNode::List(items) => Self::list(items),
+      AstNode::Object(entries) => Self::object(entries),
       AstNode::Block(items) => Self::block(items),
       AstNode::Binary(op_type, left, right) => Self::binary(*op_type, left, right),
       AstNode::Logical(op_type, left, right) => Self::logical(*op_type, left, right),
@@ -77,6 +80,24 @@ impl Evaluator {
   fn list(nodes: &[AstNode]) -> Result<Value, String> {
     let values: Result<Vec<Value>, String> = nodes.iter().map(Self::evaluate).collect();
     Ok(Value::List(values?))
+  }
+
+  fn object(entries: &[(AstObjectKey, AstNode)]) -> Result<Value, String> {
+    let mut fields = HashMap::with_capacity(entries.len());
+
+    for (key, value) in entries {
+      let key = match key {
+        AstObjectKey::Literal(k) => k.clone(),
+        AstObjectKey::Computed(node) => match Self::evaluate(node)? {
+          Value::String(s) => s,
+          _ => return Err("Object keys must be strings.".to_string()),
+        },
+      };
+
+      fields.insert(key, Self::evaluate(value)?);
+    }
+
+    Ok(Value::Object(fields))
   }
 
   fn block(nodes: &[AstNode]) -> Result<Value, String> {

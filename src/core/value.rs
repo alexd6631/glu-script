@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{collections::HashMap, rc::Rc};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
@@ -6,5 +6,6 @@ pub enum Value {
   Bool(bool),
   Number(f64),
   String(Rc<str>),
-  List(Vec<Value>)
+  List(Vec<Value>),
+  Object(HashMap<Rc<str>, Value>),
 }
