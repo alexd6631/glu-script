@@ -6,6 +6,6 @@ pub enum Value {
   Bool(bool),
   Number(f64),
   String(Rc<str>),
-  List(Vec<Value>),
-  Object(HashMap<Rc<str>, Value>),
+  List(Rc<Vec<Value>>),
+  Object(Rc<HashMap<Rc<str>, Value>>),
 }

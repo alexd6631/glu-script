@@ -25,7 +25,7 @@ pub fn test_parse(s: String) {
 pub fn test_evaluate(s: String) {
   let mut compiler = Compiler::new(&s);
   let ast = compiler.compile();
-  let result = Evaluator::evaluate(&ast);
+  let result = Evaluator::new().evaluate(&ast);
 
   dbg!(result);
 }

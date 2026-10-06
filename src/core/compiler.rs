@@ -132,6 +132,13 @@ impl<'a> Compiler<'a> {
     AstNode::List(items)
   }
 
+  fn variable(&mut self, _can_assign: bool) -> AstNode {
+    let token = self.parser.get_previous();
+    let lexeme = token.lexeme;
+
+    AstNode::VariableRef(lexeme.into())
+  }
+
   fn block_or_object_literal(&mut self, _can_assign: bool) -> AstNode {
     if self.look_object_literal_ahead() {
       self.object_literal(_can_assign)
@@ -227,6 +234,25 @@ impl<'a> Compiler<'a> {
     AstNode::Block(items)
   }
 
+  fn let_binding(&mut self, _can_assign: bool) -> AstNode {
+    self
+      .parser
+      .consume(TokenType::Identifier, "expected identifier");
+    let id_token = self.parser.get_previous().clone();
+
+    self.parser.consume(TokenType::Equal, "expected '='");
+    let expr = self.expression();
+
+    AstNode::Binding(id_token.lexeme.into(), expr.into())
+  }
+
+  fn indexed_access(&mut self, lhs: AstNode, _can_assign: bool) -> AstNode {
+    let index_expr = self.expression();
+    self.parser.consume(TokenType::RightBracket, "expected ]");
+
+    AstNode::Index(Box::new(lhs), Box::new(index_expr))
+  }
+
   fn parse_precedence(&mut self, precedence: Precedence) -> AstNode {
     self.parser.advance();
     let Some(prefix_rule) = get_rule(self.parser.get_previous().kind).prefix else {
@@ -264,7 +290,7 @@ enum Precedence {
   Term,       // + -
   Factor,     // * /
   Unary,      // ! -
-  Call,       // . ()
+  Call,       // . () []
   Primary,
 }
 
@@ -346,7 +372,7 @@ fn build_rules() -> HashMap<TokenType, ParseRule> {
       Nil => (literal, None, None)
       True => (literal, None, None)
       False => (literal, None, None)
-      // Identifier => (variable, None, None)
+      Identifier => (variable, None, None)
       String => (literal, None, None)
 
       BangEqual => (None, binary, Equality)
@@ -369,8 +395,9 @@ fn build_rules() -> HashMap<TokenType, ParseRule> {
 
       // Dot => (None, dot, Call)
 
-      LeftBracket => (list, None, None)
+      LeftBracket => (list, indexed_access, Call) // TODO fix indexed_access priority
       LeftBrace => (block_or_object_literal, None, None)
+      Let => (let_binding, None, None)
   }
 }
 
@@ -404,6 +431,22 @@ mod tests {
 
   fn str(s: &str) -> AstNode {
     AstNode::Literal(Value::String(s.into()))
+  }
+
+  fn binding(s: &str, node: AstNode) -> AstNode {
+    AstNode::Binding(s.into(), node.into())
+  }
+
+  fn var(s: &str) -> AstNode {
+    AstNode::VariableRef(s.into())
+  }
+
+  fn key(s: &str) -> AstObjectKey {
+    AstObjectKey::Literal(s.into())
+  }
+
+  fn computed(n: AstNode) -> AstObjectKey {
+    AstObjectKey::Computed(n)
   }
 
   #[test]
@@ -609,14 +652,11 @@ mod tests {
     assert_eq!(
       node,
       AstNode::Object(vec![
-        (AstObjectKey::Literal("aaaa".into()), num(1.0)),
-        (AstObjectKey::Literal("b".into()), bool(true)),
+        (key("aaaa"), num(1.0)),
+        (key("b"), bool(true)),
+        (key("c"), AstNode::List(vec![num(1.0), num(2.0), num(3.0)])),
         (
-          AstObjectKey::Literal("c".into()),
-          AstNode::List(vec![num(1.0), num(2.0), num(3.0)])
-        ),
-        (
-          AstObjectKey::Computed(bin(BOpType::Add, str("Hello"), str("world"))),
+          computed(bin(BOpType::Add, str("Hello"), str("world"))),
           str("test")
         ),
       ])
@@ -624,10 +664,55 @@ mod tests {
   }
 
   #[test]
-  fn test_foo() {
-    let mut c = Compiler::new(r#"{ [[1, 2, 3]]: 32 }"#);
+  fn test_object_literal_with_computed_key() {
+    let mut c = Compiler::new(r#"{ ["hello" + " world"]: 42 }"#);
 
     let node = c.compile();
+
+    assert_eq!(
+      node,
+      AstNode::Object(vec![(
+        computed(bin(BOpType::Add, str("hello"), str(" world"))),
+        num(42.0)
+      )])
+    )
+  }
+
+  #[test]
+  fn test_let_binding() {
+    let mut c = Compiler::new(
+      r#"{
+        let a = 1;
+        let b = 2;
+        a + b
+        }"#,
+    );
+
+    let node = c.compile();
+
+    assert_eq!(
+      node,
+      AstNode::Block(vec![
+        binding("a", num(1.0)),
+        binding("b", num(2.0)),
+        bin(BOpType::Add, var("a"), var("b"))
+      ])
+    );
+  }
+
+  #[test]
+  fn test_index_access() {
+    let mut c = Compiler::new(
+      r#"{
+        let l = [1, 2, 3];
+        let first = l[0];
+        let last = l[2];
+        last + first
+        }"#,
+    );
+
+    let node = c.compile();
+
     dbg!(node);
   }
 }

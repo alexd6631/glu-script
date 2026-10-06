@@ -23,3 +23,18 @@ m.testEvaluate(`
  c: [1, 2, { nested: "val" + "ue" }]
 }
 `)
+
+
+m.testEvaluate(`
+{
+  let a = 1;
+  let b = 2;
+
+  let obj = {
+    add: a + b,
+    mul: a * b
+  };
+
+  obj
+}
+`)

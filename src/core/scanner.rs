@@ -181,8 +181,7 @@ impl<'a> Scanner<'a> {
 
   fn current_lexeme(&self) -> &'a str {
     let s = &self.source[self.start..self.current];
-    let lexeme = unsafe { str::from_utf8_unchecked(s) };
-    lexeme
+    (unsafe { str::from_utf8_unchecked(s) }) as _
   }
 
   fn error_token(&self, message: &'static str) -> Token<'a> {

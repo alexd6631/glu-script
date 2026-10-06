@@ -12,6 +12,10 @@ pub enum AstNode {
   Unary(UOpType, Box<AstNode>),
   Binary(BOpType, Box<AstNode>, Box<AstNode>),
   Logical(LOpType, Box<AstNode>, Box<AstNode>),
+  Index(Box<AstNode>, Box<AstNode>),
+
+  Binding(Rc<str>, Box<AstNode>),
+  VariableRef(Rc<str>),
 
   Error,
 }
