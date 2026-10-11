@@ -1,7 +1,7 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::core::{
-  ast::{AstNode, AstObjectKey, BOpType, LOpType, UOpType},
+  ast::{AstNode, AstObjectKey, BOpType, IfNode, LOpType, UOpType},
   value::Value,
 };
 
@@ -29,6 +29,7 @@ impl Evaluator {
       AstNode::Unary(op_type, ast_node) => self.unary(*op_type, ast_node),
       AstNode::Binding(id, expr) => self.binding(id, expr),
       AstNode::VariableRef(id) => self.variable_ref(id),
+      AstNode::If(node) => self.if_expression(node),
       AstNode::Error => Err("Invalid expression.".to_string()),
     }
   }
@@ -182,6 +183,16 @@ impl Evaluator {
     self.environment = enclosing;
     Ok(result)
   }
+
+  fn if_expression(&mut self, node: &IfNode) -> Result<Value, String> {
+    if is_truthy(&self.evaluate(&node.condition)?) {
+      self.evaluate(&node.then_branch)
+    } else if let Some(else_branch) = &node.else_branch {
+      self.evaluate(else_branch)
+    } else {
+      Ok(Value::Nil)
+    }
+  }
 }
 
 impl Default for Evaluator {
@@ -285,10 +296,7 @@ mod tests {
 
   #[test]
   fn chained_indexed_access() {
-    assert_eq!(
-      evaluate("[[1, 2], [3, 4]][1][0]"),
-      Ok(Value::Number(3.0))
-    );
+    assert_eq!(evaluate("[[1, 2], [3, 4]][1][0]"), Ok(Value::Number(3.0)));
   }
 
   #[test]
@@ -298,7 +306,10 @@ mod tests {
 
   #[test]
   fn index_out_of_range() {
-    assert_eq!(evaluate("[1, 2][5]"), Err("Index out of range.".to_string()));
+    assert_eq!(
+      evaluate("[1, 2][5]"),
+      Err("Index out of range.".to_string())
+    );
   }
 
   #[test]
@@ -359,6 +370,87 @@ mod tests {
     assert_eq!(
       evaluate("[1, 2].a"),
       Err("Only objects have properties.".to_string())
+    );
+  }
+
+  #[test]
+  fn if_truthy_condition() {
+    assert_eq!(evaluate("if (true) 1 else 2"), Ok(Value::Number(1.0)));
+  }
+
+  #[test]
+  fn if_falsy_condition() {
+    assert_eq!(evaluate("if (false) 1 else 2"), Ok(Value::Number(2.0)));
+  }
+
+  #[test]
+  fn if_no_else_falsy() {
+    assert_eq!(evaluate("if (false) 1"), Ok(Value::Nil));
+  }
+
+  #[test]
+  fn if_no_else_truthy() {
+    assert_eq!(evaluate("if (true) 42"), Ok(Value::Number(42.0)));
+  }
+
+  #[test]
+  fn if_truthiness_number() {
+    assert_eq!(
+      evaluate(r#"if (1) "yes" else "no""#),
+      Ok(Value::String("yes".into()))
+    );
+  }
+
+  #[test]
+  fn if_truthiness_nil() {
+    assert_eq!(evaluate("if (nil) 1 else 2"), Ok(Value::Number(2.0)));
+  }
+
+  #[test]
+  fn if_else_if_chain() {
+    assert_eq!(
+      evaluate("if (false) 1 else if (true) 2 else 3"),
+      Ok(Value::Number(2.0))
+    );
+  }
+
+  #[test]
+  fn if_else_if_chain_all_falsy() {
+    assert_eq!(
+      evaluate("if (false) 1 else if (false) 2 else 3"),
+      Ok(Value::Number(3.0))
+    );
+  }
+
+  #[test]
+  fn if_inside_block() {
+    assert_eq!(
+      evaluate(r#"{ let x = 5; if (x > 3) "big" else "small" }"#),
+      Ok(Value::String("big".into()))
+    );
+  }
+
+  #[test]
+  fn if_assigned_to_variable() {
+    assert_eq!(
+      evaluate("{ let x = if (true) 10 else 20; x }"),
+      Ok(Value::Number(10.0))
+    );
+  }
+
+  #[test]
+  fn if_with_block_condition_and_then() {
+    assert_eq!(
+      evaluate("if ({ let x = 5; x > 3 }) { let y = 10; y * 2 } else { 0 }"),
+      Ok(Value::Number(20.0))
+    );
+  }
+
+  #[test]
+  fn if_with_block_condition_and_else() {
+    assert_eq!(
+      evaluate("if ({ let x = 1; x > 3 }) { 10 } else { let y = 7; y + 1 }"),
+      Ok(Value::Number(8.0))
     );
   }
 }

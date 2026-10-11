@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::OnceLock};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use crate::core::{
-  ast::{AstNode, AstObjectKey, BOpType, LOpType, UOpType},
+  ast::{AstNode, AstObjectKey, BOpType, IfNode, LOpType, UOpType},
   parser::Parser,
   scanner::{Scanner, TokenType},
   value::Value,
@@ -127,7 +127,9 @@ impl<'a> Compiler<'a> {
       }
     }
 
-    self.parser.consume(TokenType::RightBracket, "Expected ']'.");
+    self
+      .parser
+      .consume(TokenType::RightBracket, "Expected ']'.");
 
     AstNode::List(items)
   }
@@ -248,7 +250,9 @@ impl<'a> Compiler<'a> {
 
   fn indexed_access(&mut self, lhs: AstNode, _can_assign: bool) -> AstNode {
     let index_expr = self.expression();
-    self.parser.consume(TokenType::RightBracket, "Expected ']'.");
+    self
+      .parser
+      .consume(TokenType::RightBracket, "Expected ']'.");
 
     AstNode::Index(Box::new(lhs), Box::new(index_expr))
   }
@@ -260,6 +264,30 @@ impl<'a> Compiler<'a> {
     let name = self.parser.get_previous().lexeme.into();
 
     AstNode::Property(Box::new(lhs), name)
+  }
+
+  fn if_expression(&mut self, _can_assign: bool) -> AstNode {
+    self
+      .parser
+      .consume(TokenType::LeftParen, "Expect '(' after 'if'.");
+    let condition = self.expression();
+    self
+      .parser
+      .consume(TokenType::RightParen, "Expect ')' after condition.");
+
+    let then_branch = self.expression();
+
+    let else_branch = if self.parser.matches(TokenType::Else) {
+      Some(Box::new(self.expression()))
+    } else {
+      None
+    };
+
+    AstNode::If(IfNode {
+      condition: Box::new(condition),
+      then_branch: Box::new(then_branch),
+      else_branch,
+    })
   }
 
   fn parse_precedence(&mut self, precedence: Precedence) -> AstNode {
@@ -407,13 +435,14 @@ fn build_rules() -> HashMap<TokenType, ParseRule> {
       LeftBracket => (list, indexed_access, Call) // TODO fix indexed_access priority
       LeftBrace => (block_or_object_literal, None, None)
       Let => (let_binding, None, None)
+      If => (if_expression, None, None)
   }
 }
 
 #[cfg(test)]
 mod tests {
   use crate::core::{
-    ast::{AstNode, AstObjectKey, BOpType, LOpType, UOpType},
+    ast::{AstNode, AstObjectKey, BOpType, IfNode, LOpType, UOpType},
     compiler::Compiler,
     value::Value,
   };
@@ -464,6 +493,14 @@ mod tests {
 
   fn index(lhs: AstNode, rhs: AstNode) -> AstNode {
     AstNode::Index(Box::new(lhs), Box::new(rhs))
+  }
+
+  fn if_expr(condition: AstNode, then_branch: AstNode, else_branch: Option<AstNode>) -> AstNode {
+    AstNode::If(IfNode {
+      condition: Box::new(condition),
+      then_branch: Box::new(then_branch),
+      else_branch: else_branch.map(Box::new),
+    })
   }
 
   #[test]
@@ -747,13 +784,7 @@ mod tests {
 
     let node = c.compile();
 
-    assert_eq!(
-      node,
-      prop(
-        AstNode::Object(vec![(key("a"), num(1.0))]),
-        "a"
-      )
-    );
+    assert_eq!(node, prop(AstNode::Object(vec![(key("a"), num(1.0))]), "a"));
   }
 
   #[test]
@@ -766,7 +797,10 @@ mod tests {
       node,
       prop(
         prop(
-          AstNode::Object(vec![(key("a"), AstNode::Object(vec![(key("b"), str("x"))]))]),
+          AstNode::Object(vec![(
+            key("a"),
+            AstNode::Object(vec![(key("b"), str("x"))])
+          )]),
           "a"
         ),
         "b"
@@ -788,6 +822,63 @@ mod tests {
           "a"
         ),
         num(1.0)
+      )
+    );
+  }
+
+  #[test]
+  fn test_if_expression() {
+    let mut c = Compiler::new("if (true) 1");
+    let node = c.compile();
+
+    assert_eq!(node, if_expr(bool(true), num(1.0), None));
+  }
+
+  #[test]
+  fn test_if_else_expression() {
+    let mut c = Compiler::new("if (a) 1 else 2");
+    let node = c.compile();
+
+    assert_eq!(node, if_expr(var("a"), num(1.0), Some(num(2.0))));
+  }
+
+  #[test]
+  fn test_if_else_if_chain() {
+    let mut c = Compiler::new("if (a) 1 else if (b) 2 else 3");
+    let node = c.compile();
+
+    assert_eq!(
+      node,
+      if_expr(
+        var("a"),
+        num(1.0),
+        Some(if_expr(var("b"), num(2.0), Some(num(3.0))))
+      )
+    );
+  }
+
+  #[test]
+  fn test_if_as_sub_expression() {
+    let mut c = Compiler::new("let x = if (a) 1 else 2");
+    let node = c.compile();
+
+    assert_eq!(
+      node,
+      binding("x", if_expr(var("a"), num(1.0), Some(num(2.0))))
+    );
+  }
+
+  #[test]
+  fn test_if_with_block_branches() {
+    let mut c = Compiler::new("if (a) { 1; 2 } else { 3 }");
+    let node = c.compile();
+
+    assert_eq!(
+      node,
+      if_expr(
+        var("a"),
+        AstNode::Block(vec![num(1.0), num(2.0)]),
+        Some(AstNode::Block(vec![num(3.0)]))
       )
     );
   }

@@ -18,8 +18,18 @@ pub enum AstNode {
   Binding(Rc<str>, Box<AstNode>),
   VariableRef(Rc<str>),
 
+  If(IfNode),
+
   Error,
 }
+
+#[derive(Debug, PartialEq)]
+pub struct IfNode {
+  pub condition: Box<AstNode>,
+  pub then_branch: Box<AstNode>,
+  pub else_branch: Option<Box<AstNode>>,
+}
+
 #[derive(Debug, PartialEq)]
 pub enum AstObjectKey {
   Literal(Rc<str>),
