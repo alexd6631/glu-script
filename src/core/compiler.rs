@@ -127,7 +127,7 @@ impl<'a> Compiler<'a> {
       }
     }
 
-    self.parser.consume(TokenType::RightBracket, "Expected ']'");
+    self.parser.consume(TokenType::RightBracket, "Expected ']'.");
 
     AstNode::List(items)
   }
@@ -193,16 +193,16 @@ impl<'a> Compiler<'a> {
           let key_expr = self.expression();
           self
             .parser
-            .consume(TokenType::RightBracket, "expected right bracket");
+            .consume(TokenType::RightBracket, "Expected ']'.");
           AstObjectKey::Computed(key_expr)
         } else {
           self
             .parser
-            .error_at_current("expected string or identifier");
+            .error_at_current("Expected a string or an identifier.");
           AstObjectKey::Literal("error".into())
         };
 
-        self.parser.consume(TokenType::Colon, "expected :");
+        self.parser.consume(TokenType::Colon, "Expected ':'.");
         let value = self.expression();
 
         entries.push((key, value));
@@ -213,7 +213,7 @@ impl<'a> Compiler<'a> {
       }
     }
 
-    self.parser.consume(TokenType::RightBrace, "Expected '}'");
+    self.parser.consume(TokenType::RightBrace, "Expected '}'.");
 
     AstNode::Object(entries)
   }
@@ -229,7 +229,7 @@ impl<'a> Compiler<'a> {
       }
     }
 
-    self.parser.consume(TokenType::RightBrace, "Expected '}'");
+    self.parser.consume(TokenType::RightBrace, "Expected '}'.");
 
     AstNode::Block(items)
   }
@@ -237,10 +237,10 @@ impl<'a> Compiler<'a> {
   fn let_binding(&mut self, _can_assign: bool) -> AstNode {
     self
       .parser
-      .consume(TokenType::Identifier, "expected identifier");
+      .consume(TokenType::Identifier, "Expected an identifier.");
     let id_token = self.parser.get_previous().clone();
 
-    self.parser.consume(TokenType::Equal, "expected '='");
+    self.parser.consume(TokenType::Equal, "Expected '='.");
     let expr = self.expression();
 
     AstNode::Binding(id_token.lexeme.into(), expr.into())
@@ -248,9 +248,18 @@ impl<'a> Compiler<'a> {
 
   fn indexed_access(&mut self, lhs: AstNode, _can_assign: bool) -> AstNode {
     let index_expr = self.expression();
-    self.parser.consume(TokenType::RightBracket, "expected ]");
+    self.parser.consume(TokenType::RightBracket, "Expected ']'.");
 
     AstNode::Index(Box::new(lhs), Box::new(index_expr))
+  }
+
+  fn dot(&mut self, lhs: AstNode, _can_assign: bool) -> AstNode {
+    self
+      .parser
+      .consume(TokenType::Identifier, "Expect property name after '.'.");
+    let name = self.parser.get_previous().lexeme.into();
+
+    AstNode::Property(Box::new(lhs), name)
   }
 
   fn parse_precedence(&mut self, precedence: Precedence) -> AstNode {
@@ -393,7 +402,7 @@ fn build_rules() -> HashMap<TokenType, ParseRule> {
       And => (None, logical, And)
       Or => (None, logical, Or)
 
-      // Dot => (None, dot, Call)
+      Dot => (None, dot, Call)
 
       LeftBracket => (list, indexed_access, Call) // TODO fix indexed_access priority
       LeftBrace => (block_or_object_literal, None, None)
@@ -447,6 +456,14 @@ mod tests {
 
   fn computed(n: AstNode) -> AstObjectKey {
     AstObjectKey::Computed(n)
+  }
+
+  fn prop(node: AstNode, name: &str) -> AstNode {
+    AstNode::Property(node.into(), name.into())
+  }
+
+  fn index(lhs: AstNode, rhs: AstNode) -> AstNode {
+    AstNode::Index(Box::new(lhs), Box::new(rhs))
   }
 
   #[test]
@@ -713,6 +730,65 @@ mod tests {
 
     let node = c.compile();
 
-    dbg!(node);
+    assert_eq!(
+      node,
+      AstNode::Block(vec![
+        binding("l", AstNode::List(vec![num(1.0), num(2.0), num(3.0)])),
+        binding("first", index(var("l"), num(0.0))),
+        binding("last", index(var("l"), num(2.0))),
+        bin(BOpType::Add, var("last"), var("first"))
+      ])
+    );
+  }
+
+  #[test]
+  fn test_dot_access() {
+    let mut c = Compiler::new("{a: 1}.a");
+
+    let node = c.compile();
+
+    assert_eq!(
+      node,
+      prop(
+        AstNode::Object(vec![(key("a"), num(1.0))]),
+        "a"
+      )
+    );
+  }
+
+  #[test]
+  fn test_chained_dot_access() {
+    let mut c = Compiler::new(r#"{ a: { b: "x" } }.a.b"#);
+
+    let node = c.compile();
+
+    assert_eq!(
+      node,
+      prop(
+        prop(
+          AstNode::Object(vec![(key("a"), AstNode::Object(vec![(key("b"), str("x"))]))]),
+          "a"
+        ),
+        "b"
+      )
+    );
+  }
+
+  #[test]
+  fn test_dot_and_index_mixed() {
+    let mut c = Compiler::new("{ a: [1, 2] }.a[1]");
+
+    let node = c.compile();
+
+    assert_eq!(
+      node,
+      index(
+        prop(
+          AstNode::Object(vec![(key("a"), AstNode::List(vec![num(1.0), num(2.0)]))]),
+          "a"
+        ),
+        num(1.0)
+      )
+    );
   }
 }

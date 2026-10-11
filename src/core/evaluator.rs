@@ -25,6 +25,7 @@ impl Evaluator {
       AstNode::Binary(op_type, left, right) => self.binary(*op_type, left, right),
       AstNode::Logical(op_type, left, right) => self.logical(*op_type, left, right),
       AstNode::Index(target, index) => self.index(target, index),
+      AstNode::Property(target, name) => self.property(target, name),
       AstNode::Unary(op_type, ast_node) => self.unary(*op_type, ast_node),
       AstNode::Binding(id, expr) => self.binding(id, expr),
       AstNode::VariableRef(id) => self.variable_ref(id),
@@ -155,6 +156,16 @@ impl Evaluator {
         .map(|c| Value::String(c.to_string().into()))
         .ok_or_else(|| "Index out of range.".to_string()),
       _ => Err("Only lists and strings can be indexed.".to_string()),
+    }
+  }
+
+  fn property(&mut self, target: &AstNode, name: &Rc<str>) -> Result<Value, String> {
+    match self.evaluate(target)? {
+      Value::Object(fields) => fields
+        .get(name)
+        .cloned()
+        .ok_or_else(|| format!("Undefined property '{name}'.")),
+      _ => Err("Only objects have properties.".to_string()),
     }
   }
 
@@ -311,6 +322,43 @@ mod tests {
     assert_eq!(
       evaluate("1[0]"),
       Err("Only lists and strings can be indexed.".to_string())
+    );
+  }
+
+  #[test]
+  fn object_property_access() {
+    assert_eq!(evaluate("{a: 1}.a"), Ok(Value::Number(1.0)));
+  }
+
+  #[test]
+  fn chained_property_access() {
+    assert_eq!(
+      evaluate(r#"{a: {b: "x"}}.a.b"#),
+      Ok(Value::String("x".into()))
+    );
+  }
+
+  #[test]
+  fn property_access_through_variable() {
+    assert_eq!(
+      evaluate(r#"{ let o = {n: 1}; o.n }"#),
+      Ok(Value::Number(1.0))
+    );
+  }
+
+  #[test]
+  fn missing_property() {
+    assert_eq!(
+      evaluate("{a: 1}.b"),
+      Err("Undefined property 'b'.".to_string())
+    );
+  }
+
+  #[test]
+  fn non_object_property_target() {
+    assert_eq!(
+      evaluate("[1, 2].a"),
+      Err("Only objects have properties.".to_string())
     );
   }
 }

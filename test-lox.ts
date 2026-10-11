@@ -38,3 +38,17 @@ m.testEvaluate(`
   obj
 }
 `)
+
+
+m.testEvaluate(`
+{
+  let obj = {
+    a: {
+      b: {
+        c: 42
+      }
+    }
+  };
+
+  obj.a.b.c * 2
+}`)
