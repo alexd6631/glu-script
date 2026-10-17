@@ -24,9 +24,15 @@ impl<'a> Compiler<'a> {
     Self { parser }
   }
 
-  pub fn compile(&mut self) -> AstNode {
+  pub fn compile(&mut self) -> Option<AstNode> {
     self.parser.advance();
-    self.expression()
+    let expr = self.expression();
+
+    if !self.parser.had_error {
+      Some(expr)
+    } else {
+      None
+    }
   }
 
   fn expression(&mut self) -> AstNode {
@@ -503,10 +509,13 @@ mod tests {
     })
   }
 
+  fn compile(src: &str) -> AstNode {
+    Compiler::new(src).compile().unwrap()
+  }
+
   #[test]
   fn test_parse_expression() {
-    let mut c = Compiler::new("1 + 1 - 2 * 3 + 2/5");
-    let node = c.compile();
+    let node = compile("1 + 1 - 2 * 3 + 2/5");
 
     assert_eq!(
       node,
@@ -524,8 +533,7 @@ mod tests {
 
   #[test]
   fn test_parse_comparison() {
-    let mut c = Compiler::new("1 < 2 + 3");
-    let node = c.compile();
+    let node = compile("1 < 2 + 3");
 
     assert_eq!(
       node,
@@ -539,8 +547,7 @@ mod tests {
 
   #[test]
   fn test_parse_comparison_left_associative() {
-    let mut c = Compiler::new("1 <= 2 > 3 >= 4");
-    let node = c.compile();
+    let node = compile("1 <= 2 > 3 >= 4");
 
     assert_eq!(
       node,
@@ -558,8 +565,7 @@ mod tests {
 
   #[test]
   fn test_parse_equality() {
-    let mut c = Compiler::new("1 == 2 != 3 < 4");
-    let node = c.compile();
+    let node = compile("1 == 2 != 3 < 4");
 
     assert_eq!(
       node,
@@ -573,16 +579,14 @@ mod tests {
 
   #[test]
   fn test_parse_unary() {
-    let mut c = Compiler::new("-1");
-    let node = c.compile();
+    let node = compile("-1");
 
     assert_eq!(node, unary(UOpType::Negate, num(1.0)))
   }
 
   #[test]
   fn test_grouping() {
-    let mut c = Compiler::new("3 * (1 + 2)");
-    let node = c.compile();
+    let node = compile("3 * (1 + 2)");
 
     assert_eq!(
       node,
@@ -596,8 +600,7 @@ mod tests {
 
   #[test]
   fn test_parse_modulo() {
-    let mut c = Compiler::new("1 + 2 % 3");
-    let node = c.compile();
+    let node = compile("1 + 2 % 3");
 
     assert_eq!(
       node,
@@ -611,8 +614,7 @@ mod tests {
 
   #[test]
   fn test_parse_and_or() {
-    let mut c = Compiler::new("1 or 2 and 3");
-    let node = c.compile();
+    let node = compile("1 or 2 and 3");
 
     assert_eq!(
       node,
@@ -622,8 +624,7 @@ mod tests {
 
   #[test]
   fn test_parse_and_or_left_associative() {
-    let mut c = Compiler::new("1 and 2 or 3");
-    let node = c.compile();
+    let node = compile("1 and 2 or 3");
 
     assert_eq!(
       node,
@@ -633,48 +634,42 @@ mod tests {
 
   #[test]
   fn test_literal_string() {
-    let mut c = Compiler::new("\"Hello\" + \" world\"");
-    let node = c.compile();
+    let node = compile("\"Hello\" + \" world\"");
 
     assert_eq!(node, bin(BOpType::Add, str("Hello"), str(" world")));
   }
 
   #[test]
   fn test_literal_true() {
-    let mut c = Compiler::new("true");
-    let node = c.compile();
+    let node = compile("true");
 
     assert_eq!(node, AstNode::Literal(Value::Bool(true)));
   }
 
   #[test]
   fn test_literal_false() {
-    let mut c = Compiler::new("false");
-    let node = c.compile();
+    let node = compile("false");
 
     assert_eq!(node, AstNode::Literal(Value::Bool(false)));
   }
 
   #[test]
   fn test_literal_nil() {
-    let mut c = Compiler::new("nil");
-    let node = c.compile();
+    let node = compile("nil");
 
     assert_eq!(node, AstNode::Literal(Value::Nil));
   }
 
   #[test]
   fn test_literal_number() {
-    let mut c = Compiler::new("42.5");
-    let node = c.compile();
+    let node = compile("42.5");
 
     assert_eq!(node, num(42.5));
   }
 
   #[test]
   fn test_literal_list() {
-    let mut c = Compiler::new("([42.5, \"hello\", false, true]");
-    let node = c.compile();
+    let node = compile("[42.5, \"hello\", false, true]");
 
     assert_eq!(
       node,
@@ -684,8 +679,7 @@ mod tests {
 
   #[test]
   fn test_block() {
-    let mut c = Compiler::new("{ 1 + 2; 2 + 2 }");
-    let node = c.compile();
+    let node = compile("{ 1 + 2; 2 + 2 }");
 
     assert_eq!(
       node,
@@ -698,10 +692,7 @@ mod tests {
 
   #[test]
   fn test_object_literal() {
-    let mut c =
-      Compiler::new(r#"{ "aaaa": 1, b: true, c: [1, 2, 3], ["Hello" + "world"]: "test"}"#);
-
-    let node = c.compile();
+    let node = compile(r#"{ "aaaa": 1, b: true, c: [1, 2, 3], ["Hello" + "world"]: "test"}"#);
 
     assert_eq!(
       node,
@@ -719,9 +710,7 @@ mod tests {
 
   #[test]
   fn test_object_literal_with_computed_key() {
-    let mut c = Compiler::new(r#"{ ["hello" + " world"]: 42 }"#);
-
-    let node = c.compile();
+    let node = compile(r#"{ ["hello" + " world"]: 42 }"#);
 
     assert_eq!(
       node,
@@ -734,15 +723,13 @@ mod tests {
 
   #[test]
   fn test_let_binding() {
-    let mut c = Compiler::new(
+    let node = compile(
       r#"{
         let a = 1;
         let b = 2;
         a + b
         }"#,
     );
-
-    let node = c.compile();
 
     assert_eq!(
       node,
@@ -756,7 +743,7 @@ mod tests {
 
   #[test]
   fn test_index_access() {
-    let mut c = Compiler::new(
+    let node = compile(
       r#"{
         let l = [1, 2, 3];
         let first = l[0];
@@ -764,8 +751,6 @@ mod tests {
         last + first
         }"#,
     );
-
-    let node = c.compile();
 
     assert_eq!(
       node,
@@ -780,18 +765,14 @@ mod tests {
 
   #[test]
   fn test_dot_access() {
-    let mut c = Compiler::new("{a: 1}.a");
-
-    let node = c.compile();
+    let node = compile("{a: 1}.a");
 
     assert_eq!(node, prop(AstNode::Object(vec![(key("a"), num(1.0))]), "a"));
   }
 
   #[test]
   fn test_chained_dot_access() {
-    let mut c = Compiler::new(r#"{ a: { b: "x" } }.a.b"#);
-
-    let node = c.compile();
+    let node = compile(r#"{ a: { b: "x" } }.a.b"#);
 
     assert_eq!(
       node,
@@ -810,9 +791,7 @@ mod tests {
 
   #[test]
   fn test_dot_and_index_mixed() {
-    let mut c = Compiler::new("{ a: [1, 2] }.a[1]");
-
-    let node = c.compile();
+    let node = compile("{ a: [1, 2] }.a[1]");
 
     assert_eq!(
       node,
@@ -828,24 +807,21 @@ mod tests {
 
   #[test]
   fn test_if_expression() {
-    let mut c = Compiler::new("if (true) 1");
-    let node = c.compile();
+    let node = compile("if (true) 1");
 
     assert_eq!(node, if_expr(bool(true), num(1.0), None));
   }
 
   #[test]
   fn test_if_else_expression() {
-    let mut c = Compiler::new("if (a) 1 else 2");
-    let node = c.compile();
+    let node = compile("if (a) 1 else 2");
 
     assert_eq!(node, if_expr(var("a"), num(1.0), Some(num(2.0))));
   }
 
   #[test]
   fn test_if_else_if_chain() {
-    let mut c = Compiler::new("if (a) 1 else if (b) 2 else 3");
-    let node = c.compile();
+    let node = compile("if (a) 1 else if (b) 2 else 3");
 
     assert_eq!(
       node,
@@ -859,8 +835,7 @@ mod tests {
 
   #[test]
   fn test_if_as_sub_expression() {
-    let mut c = Compiler::new("let x = if (a) 1 else 2");
-    let node = c.compile();
+    let node = compile("let x = if (a) 1 else 2");
 
     assert_eq!(
       node,
@@ -870,8 +845,7 @@ mod tests {
 
   #[test]
   fn test_if_with_block_branches() {
-    let mut c = Compiler::new("if (a) { 1; 2 } else { 3 }");
-    let node = c.compile();
+    let node = compile("if (a) { 1; 2 } else { 3 }");
 
     assert_eq!(
       node,

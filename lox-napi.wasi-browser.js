@@ -601,5 +601,6 @@ try {
   throw __attachCleanupErrors(error, cleanupErrors)
 }
 export default __napiModule.exports
+export const testEvaluate = __napiModule.exports.testEvaluate
 export const testParse = __napiModule.exports.testParse
 export const testScan = __napiModule.exports.testScan

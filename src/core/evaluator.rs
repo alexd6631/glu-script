@@ -246,7 +246,10 @@ mod tests {
   use super::*;
 
   fn evaluate(source: &str) -> Result<Value, String> {
-    let ast = crate::core::compiler::Compiler::new(source).compile();
+    let ast = crate::core::compiler::Compiler::new(source)
+      .compile()
+      .unwrap();
+
     Evaluator::new().evaluate(&ast)
   }
 

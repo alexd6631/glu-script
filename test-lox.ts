@@ -1,31 +1,23 @@
-import m from './index.js';
+import m from "./index.js";
 
-// m.testScan(`
-// fun sample() {
-//   {
-//     "a": 1,
-//     "b": input.value
-//   }
-// }
+function evaluate(s: string): unknown {
+  const val = m.testEvaluate(s);
+  console.log(val);
+  return val;
+}
 
-// sample()
-// `);
+evaluate("[1 +1 , 2 + 2, 3 * 4, [1, 2*2, 3*3]]");
 
-// m.testScan('[1, 2, 3]')
-m.testEvaluate('[1 +1 , 2 + 2, 3 * 4, [1, 2*2, 3*3]]')
-// m.testEvaluate("2 * (3 + 1)")
-
-
-m.testEvaluate(`
+const res = evaluate(`
 {
  a: 1,
  b: 2 + 2,
  c: [1, 2, { nested: "val" + "ue" }]
 }
-`)
+`);
+console.log((res as any).c[2]);
 
-
-m.testEvaluate(`
+evaluate(`
 {
   let a = 1;
   let b = 2;
@@ -37,10 +29,9 @@ m.testEvaluate(`
 
   obj
 }
-`)
+`);
 
-
-m.testEvaluate(`
+evaluate(`
 {
   let obj = {
     a: {
@@ -51,4 +42,4 @@ m.testEvaluate(`
   };
 
   obj.a.b.c * 2
-}`)
+}`);

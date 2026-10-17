@@ -1,9 +1,12 @@
 #![deny(clippy::all)]
 pub mod core;
 
+use std::{collections::HashMap, rc::Rc};
+
+use napi::{Env, Unknown, bindgen_prelude::*};
 use napi_derive::napi;
 
-use crate::core::{compiler::Compiler, evaluator::Evaluator, scanner::Scanner};
+use crate::core::{compiler::Compiler, evaluator::Evaluator, scanner::Scanner, value::Value};
 
 #[napi]
 pub fn test_scan(s: String) {
@@ -22,10 +25,47 @@ pub fn test_parse(s: String) {
 }
 
 #[napi]
-pub fn test_evaluate(s: String) {
+pub fn test_evaluate(env: &Env, s: String) -> Result<Unknown<'_>> {
   let mut compiler = Compiler::new(&s);
-  let ast = compiler.compile();
-  let result = Evaluator::new().evaluate(&ast);
+  if let Some(ast) = compiler.compile() {
+    let res = Evaluator::new().evaluate(&ast).map_err(|e| {
+      Error::new(
+        Status::InvalidArg,
+        format!("failed to evaluate expression: {e}"),
+      )
+    })?;
 
-  dbg!(result);
+    to_js(res, env)
+  } else {
+    Err(Error::new(Status::InvalidArg, "failed to parse expression"))
+  }
+}
+
+fn to_js(v: Value, env: &Env) -> Result<Unknown<'_>> {
+  let js_value = match v {
+    Value::Nil => ().into_unknown(env)?,
+    Value::Bool(b) => b.into_unknown(env)?,
+    Value::Number(n) => n.into_unknown(env)?,
+    Value::String(s) => s.into_unknown(env)?,
+    Value::List(values) => to_array(env, values)?,
+    Value::Object(hash_map) => to_object(env, hash_map)?,
+  };
+
+  Ok(js_value)
+}
+
+fn to_array(env: &Env, values: Rc<Vec<Value>>) -> Result<Unknown<'_>> {
+  let mut array = env.create_array(values.len() as u32)?;
+  for (i, obj) in values.iter().enumerate() {
+    array.set(i as u32, to_js(obj.clone(), env)?)?;
+  }
+  array.into_unknown(env)
+}
+
+fn to_object(env: &Env, hash_map: Rc<HashMap<Rc<str>, Value>>) -> Result<Unknown<'_>> {
+  let mut object = Object::new(env)?;
+  for (key, value) in hash_map.iter() {
+    object.set(key.as_ref(), to_js(value.clone(), env)?)?;
+  }
+  object.into_unknown(env)
 }

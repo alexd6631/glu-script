@@ -1,4 +1,4 @@
-use std::{collections::HashMap, rc::Rc};
+use std::{collections::HashMap, fmt, rc::Rc};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
@@ -8,4 +8,35 @@ pub enum Value {
   String(Rc<str>),
   List(Rc<Vec<Value>>),
   Object(Rc<HashMap<Rc<str>, Value>>),
+}
+
+impl fmt::Display for Value {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    match self {
+      Value::Nil => write!(f, "nil"),
+      Value::Bool(b) => write!(f, "{b}"),
+      Value::Number(n) => write!(f, "{n}"),
+      Value::String(s) => write!(f, "\"{s}\""),
+      Value::List(items) => {
+        write!(f, "[")?;
+        for (i, item) in items.iter().enumerate() {
+          if i > 0 {
+            write!(f, ", ")?;
+          }
+          write!(f, "{item}")?;
+        }
+        write!(f, "]")
+      }
+      Value::Object(entries) => {
+        write!(f, "{{")?;
+        for (i, (key, value)) in entries.iter().enumerate() {
+          if i > 0 {
+            write!(f, ", ")?;
+          }
+          write!(f, "\"{key}\": {value}")?;
+        }
+        write!(f, "}}")
+      }
+    }
+  }
 }

@@ -8,7 +8,7 @@ pub struct Parser<'a> {
   scanner: Scanner<'a>,
   current: Option<Token<'a>>,
   previous: Option<Token<'a>>,
-  had_error: bool,
+  pub had_error: bool,
   panic_mode: bool,
   writers: Writers,
 }
