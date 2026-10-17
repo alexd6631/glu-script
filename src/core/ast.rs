@@ -19,6 +19,8 @@ pub enum AstNode {
   VariableRef(Rc<str>),
 
   If(IfNode),
+  Closure(Rc<ClosureNode>),
+  Call(Box<AstNode>, Vec<AstNode>),
 
   Error,
 }
@@ -28,6 +30,12 @@ pub struct IfNode {
   pub condition: Box<AstNode>,
   pub then_branch: Box<AstNode>,
   pub else_branch: Option<Box<AstNode>>,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct ClosureNode {
+  pub params: Vec<Rc<str>>,
+  pub body: Box<AstNode>,
 }
 
 #[derive(Debug, PartialEq)]

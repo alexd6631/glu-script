@@ -49,6 +49,7 @@ fn to_js(v: Value, env: &Env) -> Result<Unknown<'_>> {
     Value::String(s) => s.into_unknown(env)?,
     Value::List(values) => to_array(env, values)?,
     Value::Object(hash_map) => to_object(env, hash_map)?,
+    Value::Closure(_) => "closure".into_unknown(env)?,
   };
 
   Ok(js_value)

@@ -1,5 +1,7 @@
 use std::{collections::HashMap, fmt, rc::Rc};
 
+use crate::core::{ast::ClosureNode, environment::Environment};
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
   Nil,
@@ -8,6 +10,19 @@ pub enum Value {
   String(Rc<str>),
   List(Rc<Vec<Value>>),
   Object(Rc<HashMap<Rc<str>, Value>>),
+  Closure(Closure),
+}
+
+#[derive(Debug, Clone)]
+pub struct Closure {
+  pub node: Rc<ClosureNode>,
+  pub env: Rc<Environment>,
+}
+
+impl PartialEq for Closure {
+  fn eq(&self, other: &Self) -> bool {
+    self.node == other.node && Rc::ptr_eq(&self.env, &other.env)
+  }
 }
 
 impl fmt::Display for Value {
@@ -37,6 +52,7 @@ impl fmt::Display for Value {
         }
         write!(f, "}}")
       }
+      Value::Closure(_) => write!(f, "closure"),
     }
   }
 }

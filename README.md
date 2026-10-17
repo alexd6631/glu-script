@@ -85,3 +85,6 @@ git push
 GitHub actions will do the rest job for you.
 
 > WARN: Don't run `npm publish` manually.
+
+
+  "lldb.library": "/Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/Versions/A/LLDB",

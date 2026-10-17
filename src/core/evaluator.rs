@@ -1,8 +1,9 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{collections::HashMap, rc::Rc};
 
 use crate::core::{
-  ast::{AstNode, AstObjectKey, BOpType, IfNode, LOpType, UOpType},
-  value::Value,
+  ast::{AstNode, AstObjectKey, BOpType, ClosureNode, IfNode, LOpType, UOpType},
+  environment::Environment,
+  value::{Closure, Value},
 };
 
 pub struct Evaluator {
@@ -30,6 +31,8 @@ impl Evaluator {
       AstNode::Binding(id, expr) => self.binding(id, expr),
       AstNode::VariableRef(id) => self.variable_ref(id),
       AstNode::If(node) => self.if_expression(node),
+      AstNode::Closure(node) => self.closure(node.clone()),
+      AstNode::Call(callee, args) => self.call(callee, args),
       AstNode::Error => Err("Invalid expression.".to_string()),
     }
   }
@@ -193,6 +196,45 @@ impl Evaluator {
       Ok(Value::Nil)
     }
   }
+
+  fn closure(&mut self, node: Rc<ClosureNode>) -> Result<Value, String> {
+    let env = self.environment.clone();
+    Ok(Value::Closure(Closure { node, env }))
+  }
+
+  fn call(&mut self, callee: &AstNode, args: &[AstNode]) -> Result<Value, String> {
+    let callee_value = self.evaluate(callee)?;
+
+    let Value::Closure(closure) = callee_value else {
+      return Err("Only closures can be called.".to_string());
+    };
+
+    if closure.node.params.len() != args.len() {
+      return Err(format!(
+        "Expected {} argument(s) but got {}.",
+        closure.node.params.len(),
+        args.len()
+      ));
+    }
+
+    let mut arg_values = Vec::with_capacity(args.len());
+    for arg in args {
+      arg_values.push(self.evaluate(arg)?);
+    }
+
+    let call_env = Rc::new(Environment::new(closure.env.clone()));
+
+    for (param, value) in closure.node.params.iter().zip(arg_values) {
+      call_env.set(param.clone(), value);
+    }
+
+    let saved_env = self.environment.clone();
+    self.environment = call_env;
+    let result = self.evaluate(&closure.node.body);
+    self.environment = saved_env;
+
+    result
+  }
 }
 
 impl Default for Evaluator {
@@ -210,35 +252,6 @@ fn check_number(value: &Value) -> Result<f64, String> {
 
 fn is_truthy(value: &Value) -> bool {
   !matches!(value, Value::Nil | Value::Bool(false))
-}
-
-#[derive(Default)]
-pub struct Environment {
-  enclosing: Option<Rc<Environment>>,
-  values: RefCell<HashMap<Rc<str>, Value>>,
-}
-
-impl Environment {
-  pub fn new(enclosing: Rc<Environment>) -> Self {
-    Self {
-      enclosing: Some(enclosing),
-      values: Default::default(),
-    }
-  }
-
-  pub fn get(&self, key: &str) -> Option<Value> {
-    if let Some(value) = self.values.borrow().get(key) {
-      Some(value.clone())
-    } else if let Some(enclosing) = &self.enclosing {
-      enclosing.get(key)
-    } else {
-      None
-    }
-  }
-
-  pub fn set(&self, key: Rc<str>, value: Value) {
-    self.values.borrow_mut().insert(key, value);
-  }
 }
 
 #[cfg(test)]
@@ -454,6 +467,139 @@ mod tests {
     assert_eq!(
       evaluate("if ({ let x = 1; x > 3 }) { 10 } else { let y = 7; y + 1 }"),
       Ok(Value::Number(8.0))
+    );
+  }
+
+  #[test]
+  fn closure_evaluates_to_closure_value() {
+    let result = evaluate("|x| x + 1").unwrap();
+    assert!(matches!(result, Value::Closure(_)));
+  }
+
+  #[test]
+  fn closure_no_params() {
+    let result = evaluate("|| 42").unwrap();
+    let Value::Closure(c) = result else {
+      panic!("expected closure");
+    };
+    assert!(c.node.params.is_empty());
+    assert_eq!(*c.node.body, AstNode::Literal(Value::Number(42.0)));
+  }
+
+  #[test]
+  fn closure_captures_params() {
+    let result = evaluate("|a, b| a + b").unwrap();
+    let Value::Closure(c) = result else {
+      panic!("expected closure");
+    };
+    assert_eq!(c.node.params.len(), 2);
+    assert_eq!(&*c.node.params[0], "a");
+    assert_eq!(&*c.node.params[1], "b");
+  }
+
+  #[test]
+  fn closure_display() {
+    let result = evaluate("|x| x").unwrap();
+    assert_eq!(result.to_string(), "closure");
+  }
+
+  #[test]
+  fn closure_in_binding() {
+    let result = evaluate("{ let f = |x| x * 2; f }").unwrap();
+    assert!(matches!(result, Value::Closure(_)));
+  }
+
+  #[test]
+  fn closure_with_block_body() {
+    let result = evaluate("|x| { let y = x; y + 1 }").unwrap();
+    let Value::Closure(c) = result else {
+      panic!("expected closure");
+    };
+    assert_eq!(c.node.params.len(), 1);
+    assert!(matches!(*c.node.body, AstNode::Block(_)));
+  }
+
+  #[test]
+  fn call_closure_basic() {
+    assert_eq!(evaluate("(|x| x + 1)(5)"), Ok(Value::Number(6.0)));
+  }
+
+  #[test]
+  fn call_closure_multiple_args() {
+    assert_eq!(evaluate("(|x, y| x + y)(3, 4)"), Ok(Value::Number(7.0)));
+  }
+
+  #[test]
+  fn call_closure_no_args() {
+    assert_eq!(evaluate("(|| 42)()"), Ok(Value::Number(42.0)));
+  }
+
+  #[test]
+  fn call_closure_in_binding() {
+    assert_eq!(
+      evaluate("{ let f = |x| x * 2; f(21) }"),
+      Ok(Value::Number(42.0))
+    );
+  }
+
+  #[test]
+  fn call_closure_with_block_body() {
+    assert_eq!(
+      evaluate("(|x| { let y = x; y + 1 })(5)"),
+      Ok(Value::Number(6.0))
+    );
+  }
+
+  #[test]
+  fn call_closure_captures_environment() {
+    assert_eq!(
+      evaluate("{ let z = 10; let f = |x| x + z; f(5) }"),
+      Ok(Value::Number(15.0))
+    );
+  }
+
+  #[test]
+  fn call_wrong_arg_count_too_few() {
+    assert_eq!(
+      evaluate("(|x, y| x + y)(1)"),
+      Err("Expected 2 argument(s) but got 1.".to_string())
+    );
+  }
+
+  #[test]
+  fn call_wrong_arg_count_too_many() {
+    assert_eq!(
+      evaluate("(|x| x)(1, 2)"),
+      Err("Expected 1 argument(s) but got 2.".to_string())
+    );
+  }
+
+  #[test]
+  fn call_non_closure() {
+    assert_eq!(
+      evaluate("(1)(2)"),
+      Err("Only closures can be called.".to_string())
+    );
+  }
+
+  #[test]
+  fn call_chained_closures() {
+    assert_eq!(evaluate("(|x| |y| x + y)(3)(4)"), Ok(Value::Number(7.0)));
+  }
+
+  #[test]
+  fn call_nested() {
+    assert_eq!(
+      evaluate("{ let add = |a, b| a + b; add(add(1, 2), 3) }"),
+      Ok(Value::Number(6.0))
+    );
+  }
+
+  #[test]
+  fn call_args_evaluated_in_caller_env() {
+    assert_eq!(
+      evaluate("{ let a = 10; let f = |x| x + a; { let a = 100; f(1) } }"),
+      Ok(Value::Number(11.0))
     );
   }
 }

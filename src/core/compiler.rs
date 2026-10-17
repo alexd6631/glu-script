@@ -1,9 +1,9 @@
-use std::{collections::HashMap, sync::OnceLock};
+use std::{collections::HashMap, rc::Rc, sync::OnceLock};
 
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use crate::core::{
-  ast::{AstNode, AstObjectKey, BOpType, IfNode, LOpType, UOpType},
+  ast::{AstNode, AstObjectKey, BOpType, ClosureNode, IfNode, LOpType, UOpType},
   parser::Parser,
   scanner::{Scanner, TokenType},
   value::Value,
@@ -296,6 +296,52 @@ impl<'a> Compiler<'a> {
     })
   }
 
+  fn closure(&mut self, _can_assign: bool) -> AstNode {
+    let mut params = vec![];
+
+    if !self.parser.check(TokenType::Pipe) {
+      loop {
+        self
+          .parser
+          .consume(TokenType::Identifier, "Expected parameter name.");
+        params.push(self.parser.get_previous().lexeme.into());
+        if !self.parser.matches(TokenType::Comma) {
+          break;
+        }
+      }
+    }
+
+    self
+      .parser
+      .consume(TokenType::Pipe, "Expected '|' after parameters.");
+
+    let body = self.expression();
+
+    AstNode::Closure(Rc::new(ClosureNode {
+      params,
+      body: Box::new(body),
+    }))
+  }
+
+  fn call(&mut self, lhs: AstNode, _can_assign: bool) -> AstNode {
+    let mut args = vec![];
+
+    if !self.parser.check(TokenType::RightParen) {
+      loop {
+        args.push(self.expression());
+        if !self.parser.matches(TokenType::Comma) {
+          break;
+        }
+      }
+    }
+
+    self
+      .parser
+      .consume(TokenType::RightParen, "Expected ')' after arguments.");
+
+    AstNode::Call(Box::new(lhs), args)
+  }
+
   fn parse_precedence(&mut self, precedence: Precedence) -> AstNode {
     self.parser.advance();
     let Some(prefix_rule) = get_rule(self.parser.get_previous().kind).prefix else {
@@ -410,7 +456,7 @@ static DEFAULT_RULE: ParseRule = _rule!((None, None, None));
 
 fn build_rules() -> HashMap<TokenType, ParseRule> {
   _rules! {
-      LeftParen => (grouping, None, Call) // TODO implement call
+      LeftParen => (grouping, call, Call)
       Number => (literal, None, None)
       Nil => (literal, None, None)
       True => (literal, None, None)
@@ -442,13 +488,16 @@ fn build_rules() -> HashMap<TokenType, ParseRule> {
       LeftBrace => (block_or_object_literal, None, None)
       Let => (let_binding, None, None)
       If => (if_expression, None, None)
+      Pipe => (closure, None, None)
   }
 }
 
 #[cfg(test)]
 mod tests {
+  use std::rc::Rc;
+
   use crate::core::{
-    ast::{AstNode, AstObjectKey, BOpType, IfNode, LOpType, UOpType},
+    ast::{AstNode, AstObjectKey, BOpType, ClosureNode, IfNode, LOpType, UOpType},
     compiler::Compiler,
     value::Value,
   };
@@ -507,6 +556,17 @@ mod tests {
       then_branch: Box::new(then_branch),
       else_branch: else_branch.map(Box::new),
     })
+  }
+
+  fn closure(params: &[&str], body: AstNode) -> AstNode {
+    AstNode::Closure(Rc::new(ClosureNode {
+      params: params.iter().map(|p| (*p).into()).collect(),
+      body: Box::new(body),
+    }))
+  }
+
+  fn call(callee: AstNode, args: Vec<AstNode>) -> AstNode {
+    AstNode::Call(Box::new(callee), args)
   }
 
   fn compile(src: &str) -> AstNode {
@@ -855,5 +915,151 @@ mod tests {
         Some(AstNode::Block(vec![num(3.0)]))
       )
     );
+  }
+
+  #[test]
+  fn test_closure_no_params() {
+    let node = compile("|| 42");
+
+    assert_eq!(node, closure(&[], num(42.0)));
+  }
+
+  #[test]
+  fn test_closure_single_param() {
+    let node = compile("|x| x + 1");
+
+    assert_eq!(node, closure(&["x"], bin(BOpType::Add, var("x"), num(1.0))));
+  }
+
+  #[test]
+  fn test_closure_multiple_params() {
+    let node = compile("|a, b, c| a + b + c");
+
+    assert_eq!(
+      node,
+      closure(
+        &["a", "b", "c"],
+        bin(
+          BOpType::Add,
+          bin(BOpType::Add, var("a"), var("b")),
+          var("c")
+        )
+      )
+    );
+  }
+
+  #[test]
+  fn test_closure_with_block_body() {
+    let node = compile("|x| { let y = x; y * 2 }");
+
+    assert_eq!(
+      node,
+      closure(
+        &["x"],
+        AstNode::Block(vec![
+          binding("y", var("x")),
+          bin(BOpType::Mul, var("y"), num(2.0))
+        ])
+      )
+    );
+  }
+
+  #[test]
+  fn test_closure_in_binding() {
+    let node = compile("let f = |a, b| a * b");
+
+    assert_eq!(
+      node,
+      binding(
+        "f",
+        closure(&["a", "b"], bin(BOpType::Mul, var("a"), var("b")))
+      )
+    );
+  }
+
+  #[test]
+  fn test_closure_as_sub_expression() {
+    let node = compile("1 + |x| x");
+
+    assert_eq!(node, bin(BOpType::Add, num(1.0), closure(&["x"], var("x"))));
+  }
+
+  #[test]
+  fn test_call_no_args() {
+    let node = compile("f()");
+
+    assert_eq!(node, call(var("f"), vec![]));
+  }
+
+  #[test]
+  fn test_call_with_args() {
+    let node = compile("f(1, 2)");
+
+    assert_eq!(node, call(var("f"), vec![num(1.0), num(2.0)]));
+  }
+
+  #[test]
+  fn test_call_single_arg() {
+    let node = compile("f(42)");
+
+    assert_eq!(node, call(var("f"), vec![num(42.0)]));
+  }
+
+  #[test]
+  fn test_call_chained() {
+    let node = compile("f(1)(2)");
+
+    assert_eq!(node, call(call(var("f"), vec![num(1.0)]), vec![num(2.0)]));
+  }
+
+  #[test]
+  fn test_call_after_dot() {
+    let node = compile("obj.method(1)");
+
+    assert_eq!(node, call(prop(var("obj"), "method"), vec![num(1.0)]));
+  }
+
+  #[test]
+  fn test_call_in_binding() {
+    let node = compile("let result = f(1, 2)");
+
+    assert_eq!(
+      node,
+      binding("result", call(var("f"), vec![num(1.0), num(2.0)]))
+    );
+  }
+
+  #[test]
+  fn test_call_grouping_still_works() {
+    let node = compile("(1 + 2) * 3");
+
+    assert_eq!(
+      node,
+      bin(
+        BOpType::Mul,
+        bin(BOpType::Add, num(1.0), num(2.0)),
+        num(3.0)
+      )
+    );
+  }
+
+  #[test]
+  fn test_call_with_expression_args() {
+    let node = compile("f(1 + 2, \"hello\")");
+
+    assert_eq!(
+      node,
+      call(
+        var("f"),
+        vec![bin(BOpType::Add, num(1.0), num(2.0)), str("hello")]
+      )
+    );
+  }
+
+  #[test]
+  fn test_call_closure_immediately() {
+    let node = compile("(|x| x)(42)");
+
+    assert_eq!(node, call(closure(&["x"], var("x")), vec![num(42.0)]));
   }
 }
