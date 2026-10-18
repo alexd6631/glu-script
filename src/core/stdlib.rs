@@ -24,7 +24,7 @@ pub fn register_stdlib(evaluator: &Evaluator) {
 
         let mut vec = Vec::new();
         for item in list.iter() {
-          vec.push(eval.call_closure(&closure, &[item.clone()])?);
+          vec.push(eval.call_closure(&closure, std::slice::from_ref(&item))?);
         }
 
         Ok(Value::List(Rc::new(vec)))
@@ -40,10 +40,10 @@ pub fn register_stdlib(evaluator: &Evaluator) {
         let (list, closure) = require_list_and_closure(args)?;
 
         let mut vec = Vec::new();
-        for item in list.iter() {
-          let keep = eval.call_closure(&closure, &[item.clone()])?;
+        for item in list.iter().cloned() {
+          let keep = eval.call_closure(&closure, std::slice::from_ref(&item))?;
           if is_truthy(&keep) {
-            vec.push(item.clone());
+            vec.push(item);
           }
         }
 
@@ -65,8 +65,8 @@ pub fn register_stdlib(evaluator: &Evaluator) {
           return Err("Expected closure".to_string());
         };
 
-        for item in list.iter() {
-          acc = eval.call_closure(&closure, &[acc, item.clone()])?;
+        for item in list.iter().cloned() {
+          acc = eval.call_closure(&closure, &[acc, item])?;
         }
 
         Ok(acc)
@@ -86,8 +86,8 @@ pub fn register_stdlib(evaluator: &Evaluator) {
           .next()
           .cloned()
           .ok_or("Cannot reduce an empty array.")?;
-        for item in iter {
-          acc = eval.call_closure(&closure, &[acc, item.clone()])?;
+        for item in iter.cloned() {
+          acc = eval.call_closure(&closure, &[acc, item])?;
         }
 
         Ok(acc)
@@ -103,7 +103,7 @@ pub fn register_stdlib(evaluator: &Evaluator) {
         let (list, closure) = require_list_and_closure(args)?;
 
         for item in list.iter() {
-          if is_truthy(&eval.call_closure(&closure, &[item.clone()])?) {
+          if is_truthy(&eval.call_closure(&closure, std::slice::from_ref(&item))?) {
             return Ok(Value::Bool(true));
           }
         }
@@ -121,7 +121,7 @@ pub fn register_stdlib(evaluator: &Evaluator) {
         let (list, closure) = require_list_and_closure(args)?;
 
         for item in list.iter() {
-          if !is_truthy(&eval.call_closure(&closure, &[item.clone()])?) {
+          if !is_truthy(&eval.call_closure(&closure, std::slice::from_ref(&item))?) {
             return Ok(Value::Bool(false));
           }
         }
@@ -138,9 +138,9 @@ pub fn register_stdlib(evaluator: &Evaluator) {
       function: Rc::new(|eval, args| {
         let (list, closure) = require_list_and_closure(args)?;
 
-        for item in list.iter() {
-          if is_truthy(&eval.call_closure(&closure, &[item.clone()])?) {
-            return Ok(item.clone());
+        for item in list.iter().cloned() {
+          if is_truthy(&eval.call_closure(&closure, std::slice::from_ref(&item))?) {
+            return Ok(item);
           }
         }
 
