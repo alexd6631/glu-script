@@ -75,7 +75,7 @@ evaluate(`
   let fb = |n| if (n == 0) false else fa(n - 1);
   let isEven = |n| fa(n);
 
-  isEven(7201)
+  isEven(101)
 }
 `)
 

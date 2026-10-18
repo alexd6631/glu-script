@@ -6,14 +6,18 @@ use crate::core::{
   value::{Closure, Value},
 };
 
+pub const MAX_CALL_DEPTH: usize = 1024;
+
 pub struct Evaluator {
   environment: Rc<Environment>,
+  call_depth: usize,
 }
 
 impl Evaluator {
   pub fn new() -> Self {
     Self {
       environment: Rc::new(Environment::default()),
+      call_depth: 0,
     }
   }
 
@@ -228,9 +232,17 @@ impl Evaluator {
       call_env.set(param.clone(), value);
     }
 
+    if self.call_depth >= MAX_CALL_DEPTH {
+      return Err(format!("Recursion limit of {MAX_CALL_DEPTH} exceeded."));
+    }
+
     let saved_env = self.environment.clone();
     self.environment = call_env;
+
+    self.call_depth += 1;
     let result = self.evaluate(&closure.node.body);
+    self.call_depth -= 1;
+
     self.environment = saved_env;
 
     result
@@ -601,5 +613,48 @@ mod tests {
       evaluate("{ let a = 10; let f = |x| x + a; { let a = 100; f(1) } }"),
       Ok(Value::Number(11.0))
     );
+  }
+
+  #[test]
+  fn call_depth_limit_returns_error() {
+    assert_eq!(
+      evaluate("{ let f = |n| f(n); f(0) }"),
+      Err(format!("Recursion limit of {MAX_CALL_DEPTH} exceeded."))
+    );
+  }
+
+  #[test]
+  fn call_within_depth_limit_succeeds() {
+    std::thread::Builder::new()
+      .stack_size(64 * 1024 * 1024)
+      .spawn(move || {
+        let source = format!(
+          "{{ let f = |n| if (n == 0) 0 else f(n - 1); f({}) }}",
+          MAX_CALL_DEPTH - 1
+        );
+        assert_eq!(evaluate(&source), Ok(Value::Number(0.0)));
+      })
+      .unwrap()
+      .join()
+      .unwrap();
+  }
+
+  #[test]
+  fn call_depth_exceeding_limit_returns_error() {
+    std::thread::Builder::new()
+      .stack_size(64 * 1024 * 1024)
+      .spawn(move || {
+        let source = format!(
+          "{{ let f = |n| if (n == 0) 0 else f(n - 1); f({}) }}",
+          MAX_CALL_DEPTH
+        );
+        assert_eq!(
+          evaluate(&source),
+          Err(format!("Recursion limit of {MAX_CALL_DEPTH} exceeded."))
+        );
+      })
+      .unwrap()
+      .join()
+      .unwrap();
   }
 }
