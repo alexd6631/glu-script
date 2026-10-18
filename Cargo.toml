@@ -1,7 +1,7 @@
 [package]
-authors = ["LongYinan <lynweklm@gmail.com>"]
+authors = ["Alexandre Delattre <alexd6631@gmail.com>"]
 edition = "2024"
-name = "lox_napi"
+name = "glu_script"
 version = "0.1.0"
 
 [lib]

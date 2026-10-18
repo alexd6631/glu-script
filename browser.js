@@ -1,1 +1,1 @@
-export * from 'lox-napi-wasm32-wasi'
+export * from 'glu-script-wasm32-wasi'

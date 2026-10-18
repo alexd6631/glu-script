@@ -1,4 +1,4 @@
-import m from "./index.js";
+import m from "../index.js";
 
 function evaluate(s: string): unknown {
   const val = m.testEvaluate(s);

@@ -2417,6 +2417,30 @@ __metadata:
   languageName: node
   linkType: hard
 
+"glu-script@workspace:.":
+  version: 0.0.0-use.local
+  resolution: "glu-script@workspace:."
+  dependencies:
+    "@emnapi/core": "npm:^2.0.0-alpha.5"
+    "@emnapi/runtime": "npm:^2.0.0-alpha.5"
+    "@napi-rs/cli": "npm:^3.9.1"
+    "@napi-rs/wasm-runtime": "npm:^1.2.4"
+    "@oxc-node/core": "npm:^0.1.2"
+    "@tybys/wasm-util": "npm:^0.10.4"
+    ava: "npm:^8.0.1"
+    chalk: "npm:^6.0.0"
+    emnapi: "npm:^2.0.0-alpha.5"
+    husky: "npm:^9.1.7"
+    lint-staged: "npm:^17.5.1"
+    npm-run-all2: "npm:^9.0.3"
+    oxfmt: "npm:^0.68.0"
+    oxlint: "npm:^1.83.0"
+    prettier: "npm:^3.9.6"
+    tinybench: "npm:^6.2.0"
+    typescript: "npm:^7.0.2"
+  languageName: unknown
+  linkType: soft
+
 "graceful-fs@npm:^4.2.9":
   version: 4.2.11
   resolution: "graceful-fs@npm:4.2.11"
@@ -2628,30 +2652,6 @@ __metadata:
   checksum: 10c0/757228fc68805c59789e82185135cf85f05d0b2d3d54631d680ca79ec21944ec8314d4533639a14b8bcfbd97a517e78960933041a5af17ecb693ec6eecb99a27
   languageName: node
   linkType: hard
-
-"lox-napi@workspace:.":
-  version: 0.0.0-use.local
-  resolution: "lox-napi@workspace:."
-  dependencies:
-    "@emnapi/core": "npm:^2.0.0-alpha.5"
-    "@emnapi/runtime": "npm:^2.0.0-alpha.5"
-    "@napi-rs/cli": "npm:^3.9.1"
-    "@napi-rs/wasm-runtime": "npm:^1.2.4"
-    "@oxc-node/core": "npm:^0.1.2"
-    "@tybys/wasm-util": "npm:^0.10.4"
-    ava: "npm:^8.0.1"
-    chalk: "npm:^6.0.0"
-    emnapi: "npm:^2.0.0-alpha.5"
-    husky: "npm:^9.1.7"
-    lint-staged: "npm:^17.5.1"
-    npm-run-all2: "npm:^9.0.3"
-    oxfmt: "npm:^0.68.0"
-    oxlint: "npm:^1.83.0"
-    prettier: "npm:^3.9.6"
-    tinybench: "npm:^6.2.0"
-    typescript: "npm:^7.0.2"
-  languageName: unknown
-  linkType: soft
 
 "lru-cache@npm:^11.0.0":
   version: 11.5.2

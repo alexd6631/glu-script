@@ -69,13 +69,13 @@ function requireNative() {
   } else if (process.platform === 'android') {
     if (process.arch === 'arm64') {
       try {
-        return require('./lox-napi.android-arm64.node')
+        return require('./glu-script.android-arm64.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('lox-napi-android-arm64')
-        const bindingPackageVersion = require('lox-napi-android-arm64/package.json').version
+        const binding = require('glu-script-android-arm64')
+        const bindingPackageVersion = require('glu-script-android-arm64/package.json').version
         if (bindingPackageVersion !== '1.0.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 1.0.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -85,13 +85,13 @@ function requireNative() {
       }
     } else if (process.arch === 'arm') {
       try {
-        return require('./lox-napi.android-arm-eabi.node')
+        return require('./glu-script.android-arm-eabi.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('lox-napi-android-arm-eabi')
-        const bindingPackageVersion = require('lox-napi-android-arm-eabi/package.json').version
+        const binding = require('glu-script-android-arm-eabi')
+        const bindingPackageVersion = require('glu-script-android-arm-eabi/package.json').version
         if (bindingPackageVersion !== '1.0.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 1.0.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -106,13 +106,13 @@ function requireNative() {
     if (process.arch === 'x64') {
       if ((process.config && process.config.variables && process.config.variables.shlib_suffix === 'dll.a') || (process.config && process.config.variables && process.config.variables.node_target_type === 'shared_library')) {
         try {
-          return require('./lox-napi.win32-x64-gnu.node')
+          return require('./glu-script.win32-x64-gnu.node')
         } catch (e) {
           loadErrors.push(e)
         }
         try {
-          const binding = require('lox-napi-win32-x64-gnu')
-          const bindingPackageVersion = require('lox-napi-win32-x64-gnu/package.json').version
+          const binding = require('glu-script-win32-x64-gnu')
+          const bindingPackageVersion = require('glu-script-win32-x64-gnu/package.json').version
           if (bindingPackageVersion !== '1.0.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 1.0.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -122,13 +122,13 @@ function requireNative() {
         }
       } else {
         try {
-          return require('./lox-napi.win32-x64-msvc.node')
+          return require('./glu-script.win32-x64-msvc.node')
         } catch (e) {
           loadErrors.push(e)
         }
         try {
-          const binding = require('lox-napi-win32-x64-msvc')
-          const bindingPackageVersion = require('lox-napi-win32-x64-msvc/package.json').version
+          const binding = require('glu-script-win32-x64-msvc')
+          const bindingPackageVersion = require('glu-script-win32-x64-msvc/package.json').version
           if (bindingPackageVersion !== '1.0.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 1.0.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -139,13 +139,13 @@ function requireNative() {
       }
     } else if (process.arch === 'ia32') {
       try {
-        return require('./lox-napi.win32-ia32-msvc.node')
+        return require('./glu-script.win32-ia32-msvc.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('lox-napi-win32-ia32-msvc')
-        const bindingPackageVersion = require('lox-napi-win32-ia32-msvc/package.json').version
+        const binding = require('glu-script-win32-ia32-msvc')
+        const bindingPackageVersion = require('glu-script-win32-ia32-msvc/package.json').version
         if (bindingPackageVersion !== '1.0.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 1.0.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -155,13 +155,13 @@ function requireNative() {
       }
     } else if (process.arch === 'arm64') {
       try {
-        return require('./lox-napi.win32-arm64-msvc.node')
+        return require('./glu-script.win32-arm64-msvc.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('lox-napi-win32-arm64-msvc')
-        const bindingPackageVersion = require('lox-napi-win32-arm64-msvc/package.json').version
+        const binding = require('glu-script-win32-arm64-msvc')
+        const bindingPackageVersion = require('glu-script-win32-arm64-msvc/package.json').version
         if (bindingPackageVersion !== '1.0.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 1.0.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -174,13 +174,13 @@ function requireNative() {
     }
   } else if (process.platform === 'darwin') {
     try {
-      return require('./lox-napi.darwin-universal.node')
+      return require('./glu-script.darwin-universal.node')
     } catch (e) {
       loadErrors.push(e)
     }
     try {
-      const binding = require('lox-napi-darwin-universal')
-      const bindingPackageVersion = require('lox-napi-darwin-universal/package.json').version
+      const binding = require('glu-script-darwin-universal')
+      const bindingPackageVersion = require('glu-script-darwin-universal/package.json').version
       if (bindingPackageVersion !== '1.0.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
         throw new Error(`Native binding package version mismatch, expected 1.0.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
       }
@@ -190,13 +190,13 @@ function requireNative() {
     }
     if (process.arch === 'x64') {
       try {
-        return require('./lox-napi.darwin-x64.node')
+        return require('./glu-script.darwin-x64.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('lox-napi-darwin-x64')
-        const bindingPackageVersion = require('lox-napi-darwin-x64/package.json').version
+        const binding = require('glu-script-darwin-x64')
+        const bindingPackageVersion = require('glu-script-darwin-x64/package.json').version
         if (bindingPackageVersion !== '1.0.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 1.0.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -206,13 +206,13 @@ function requireNative() {
       }
     } else if (process.arch === 'arm64') {
       try {
-        return require('./lox-napi.darwin-arm64.node')
+        return require('./glu-script.darwin-arm64.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('lox-napi-darwin-arm64')
-        const bindingPackageVersion = require('lox-napi-darwin-arm64/package.json').version
+        const binding = require('glu-script-darwin-arm64')
+        const bindingPackageVersion = require('glu-script-darwin-arm64/package.json').version
         if (bindingPackageVersion !== '1.0.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 1.0.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -226,13 +226,13 @@ function requireNative() {
   } else if (process.platform === 'freebsd') {
     if (process.arch === 'x64') {
       try {
-        return require('./lox-napi.freebsd-x64.node')
+        return require('./glu-script.freebsd-x64.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('lox-napi-freebsd-x64')
-        const bindingPackageVersion = require('lox-napi-freebsd-x64/package.json').version
+        const binding = require('glu-script-freebsd-x64')
+        const bindingPackageVersion = require('glu-script-freebsd-x64/package.json').version
         if (bindingPackageVersion !== '1.0.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 1.0.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -242,13 +242,13 @@ function requireNative() {
       }
     } else if (process.arch === 'arm64') {
       try {
-        return require('./lox-napi.freebsd-arm64.node')
+        return require('./glu-script.freebsd-arm64.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('lox-napi-freebsd-arm64')
-        const bindingPackageVersion = require('lox-napi-freebsd-arm64/package.json').version
+        const binding = require('glu-script-freebsd-arm64')
+        const bindingPackageVersion = require('glu-script-freebsd-arm64/package.json').version
         if (bindingPackageVersion !== '1.0.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 1.0.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -263,13 +263,13 @@ function requireNative() {
     if (process.arch === 'x64') {
       if (isMusl()) {
         try {
-          return require('./lox-napi.linux-x64-musl.node')
+          return require('./glu-script.linux-x64-musl.node')
         } catch (e) {
           loadErrors.push(e)
         }
         try {
-          const binding = require('lox-napi-linux-x64-musl')
-          const bindingPackageVersion = require('lox-napi-linux-x64-musl/package.json').version
+          const binding = require('glu-script-linux-x64-musl')
+          const bindingPackageVersion = require('glu-script-linux-x64-musl/package.json').version
           if (bindingPackageVersion !== '1.0.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 1.0.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -279,13 +279,13 @@ function requireNative() {
         }
       } else {
         try {
-          return require('./lox-napi.linux-x64-gnu.node')
+          return require('./glu-script.linux-x64-gnu.node')
         } catch (e) {
           loadErrors.push(e)
         }
         try {
-          const binding = require('lox-napi-linux-x64-gnu')
-          const bindingPackageVersion = require('lox-napi-linux-x64-gnu/package.json').version
+          const binding = require('glu-script-linux-x64-gnu')
+          const bindingPackageVersion = require('glu-script-linux-x64-gnu/package.json').version
           if (bindingPackageVersion !== '1.0.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 1.0.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -297,13 +297,13 @@ function requireNative() {
     } else if (process.arch === 'arm64') {
       if (isMusl()) {
         try {
-          return require('./lox-napi.linux-arm64-musl.node')
+          return require('./glu-script.linux-arm64-musl.node')
         } catch (e) {
           loadErrors.push(e)
         }
         try {
-          const binding = require('lox-napi-linux-arm64-musl')
-          const bindingPackageVersion = require('lox-napi-linux-arm64-musl/package.json').version
+          const binding = require('glu-script-linux-arm64-musl')
+          const bindingPackageVersion = require('glu-script-linux-arm64-musl/package.json').version
           if (bindingPackageVersion !== '1.0.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 1.0.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -313,13 +313,13 @@ function requireNative() {
         }
       } else {
         try {
-          return require('./lox-napi.linux-arm64-gnu.node')
+          return require('./glu-script.linux-arm64-gnu.node')
         } catch (e) {
           loadErrors.push(e)
         }
         try {
-          const binding = require('lox-napi-linux-arm64-gnu')
-          const bindingPackageVersion = require('lox-napi-linux-arm64-gnu/package.json').version
+          const binding = require('glu-script-linux-arm64-gnu')
+          const bindingPackageVersion = require('glu-script-linux-arm64-gnu/package.json').version
           if (bindingPackageVersion !== '1.0.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 1.0.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -331,13 +331,13 @@ function requireNative() {
     } else if (process.arch === 'arm') {
       if (isMusl()) {
         try {
-          return require('./lox-napi.linux-arm-musleabihf.node')
+          return require('./glu-script.linux-arm-musleabihf.node')
         } catch (e) {
           loadErrors.push(e)
         }
         try {
-          const binding = require('lox-napi-linux-arm-musleabihf')
-          const bindingPackageVersion = require('lox-napi-linux-arm-musleabihf/package.json').version
+          const binding = require('glu-script-linux-arm-musleabihf')
+          const bindingPackageVersion = require('glu-script-linux-arm-musleabihf/package.json').version
           if (bindingPackageVersion !== '1.0.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 1.0.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -347,13 +347,13 @@ function requireNative() {
         }
       } else {
         try {
-          return require('./lox-napi.linux-arm-gnueabihf.node')
+          return require('./glu-script.linux-arm-gnueabihf.node')
         } catch (e) {
           loadErrors.push(e)
         }
         try {
-          const binding = require('lox-napi-linux-arm-gnueabihf')
-          const bindingPackageVersion = require('lox-napi-linux-arm-gnueabihf/package.json').version
+          const binding = require('glu-script-linux-arm-gnueabihf')
+          const bindingPackageVersion = require('glu-script-linux-arm-gnueabihf/package.json').version
           if (bindingPackageVersion !== '1.0.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 1.0.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -365,13 +365,13 @@ function requireNative() {
     } else if (process.arch === 'loong64') {
       if (isMusl()) {
         try {
-          return require('./lox-napi.linux-loong64-musl.node')
+          return require('./glu-script.linux-loong64-musl.node')
         } catch (e) {
           loadErrors.push(e)
         }
         try {
-          const binding = require('lox-napi-linux-loong64-musl')
-          const bindingPackageVersion = require('lox-napi-linux-loong64-musl/package.json').version
+          const binding = require('glu-script-linux-loong64-musl')
+          const bindingPackageVersion = require('glu-script-linux-loong64-musl/package.json').version
           if (bindingPackageVersion !== '1.0.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 1.0.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -381,13 +381,13 @@ function requireNative() {
         }
       } else {
         try {
-          return require('./lox-napi.linux-loong64-gnu.node')
+          return require('./glu-script.linux-loong64-gnu.node')
         } catch (e) {
           loadErrors.push(e)
         }
         try {
-          const binding = require('lox-napi-linux-loong64-gnu')
-          const bindingPackageVersion = require('lox-napi-linux-loong64-gnu/package.json').version
+          const binding = require('glu-script-linux-loong64-gnu')
+          const bindingPackageVersion = require('glu-script-linux-loong64-gnu/package.json').version
           if (bindingPackageVersion !== '1.0.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 1.0.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -399,13 +399,13 @@ function requireNative() {
     } else if (process.arch === 'riscv64') {
       if (isMusl()) {
         try {
-          return require('./lox-napi.linux-riscv64-musl.node')
+          return require('./glu-script.linux-riscv64-musl.node')
         } catch (e) {
           loadErrors.push(e)
         }
         try {
-          const binding = require('lox-napi-linux-riscv64-musl')
-          const bindingPackageVersion = require('lox-napi-linux-riscv64-musl/package.json').version
+          const binding = require('glu-script-linux-riscv64-musl')
+          const bindingPackageVersion = require('glu-script-linux-riscv64-musl/package.json').version
           if (bindingPackageVersion !== '1.0.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 1.0.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -415,13 +415,13 @@ function requireNative() {
         }
       } else {
         try {
-          return require('./lox-napi.linux-riscv64-gnu.node')
+          return require('./glu-script.linux-riscv64-gnu.node')
         } catch (e) {
           loadErrors.push(e)
         }
         try {
-          const binding = require('lox-napi-linux-riscv64-gnu')
-          const bindingPackageVersion = require('lox-napi-linux-riscv64-gnu/package.json').version
+          const binding = require('glu-script-linux-riscv64-gnu')
+          const bindingPackageVersion = require('glu-script-linux-riscv64-gnu/package.json').version
           if (bindingPackageVersion !== '1.0.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 1.0.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -432,13 +432,13 @@ function requireNative() {
       }
     } else if (process.arch === 'ppc64') {
       try {
-        return require('./lox-napi.linux-ppc64-gnu.node')
+        return require('./glu-script.linux-ppc64-gnu.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('lox-napi-linux-ppc64-gnu')
-        const bindingPackageVersion = require('lox-napi-linux-ppc64-gnu/package.json').version
+        const binding = require('glu-script-linux-ppc64-gnu')
+        const bindingPackageVersion = require('glu-script-linux-ppc64-gnu/package.json').version
         if (bindingPackageVersion !== '1.0.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 1.0.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -448,13 +448,13 @@ function requireNative() {
       }
     } else if (process.arch === 's390x') {
       try {
-        return require('./lox-napi.linux-s390x-gnu.node')
+        return require('./glu-script.linux-s390x-gnu.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('lox-napi-linux-s390x-gnu')
-        const bindingPackageVersion = require('lox-napi-linux-s390x-gnu/package.json').version
+        const binding = require('glu-script-linux-s390x-gnu')
+        const bindingPackageVersion = require('glu-script-linux-s390x-gnu/package.json').version
         if (bindingPackageVersion !== '1.0.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 1.0.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -468,13 +468,13 @@ function requireNative() {
   } else if (process.platform === 'openharmony') {
     if (process.arch === 'arm64') {
       try {
-        return require('./lox-napi.openharmony-arm64.node')
+        return require('./glu-script.openharmony-arm64.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('lox-napi-openharmony-arm64')
-        const bindingPackageVersion = require('lox-napi-openharmony-arm64/package.json').version
+        const binding = require('glu-script-openharmony-arm64')
+        const bindingPackageVersion = require('glu-script-openharmony-arm64/package.json').version
         if (bindingPackageVersion !== '1.0.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 1.0.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -484,13 +484,13 @@ function requireNative() {
       }
     } else if (process.arch === 'x64') {
       try {
-        return require('./lox-napi.openharmony-x64.node')
+        return require('./glu-script.openharmony-x64.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('lox-napi-openharmony-x64')
-        const bindingPackageVersion = require('lox-napi-openharmony-x64/package.json').version
+        const binding = require('glu-script-openharmony-x64')
+        const bindingPackageVersion = require('glu-script-openharmony-x64/package.json').version
         if (bindingPackageVersion !== '1.0.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 1.0.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -500,13 +500,13 @@ function requireNative() {
       }
     } else if (process.arch === 'arm') {
       try {
-        return require('./lox-napi.openharmony-arm.node')
+        return require('./glu-script.openharmony-arm.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('lox-napi-openharmony-arm')
-        const bindingPackageVersion = require('lox-napi-openharmony-arm/package.json').version
+        const binding = require('glu-script-openharmony-arm')
+        const bindingPackageVersion = require('glu-script-openharmony-arm/package.json').version
         if (bindingPackageVersion !== '1.0.0' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 1.0.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -622,10 +622,10 @@ if (!nativeBinding || forceWasi) {
     let candidateError = null
     let candidateFailed = false
     try {
-      candidateError = __napiWasiResolveCandidate('./lox-napi.wasi.cjs', false, ['./lox-napi.wasm32-wasi.debug.wasm', './lox-napi.wasm32-wasi.wasm'])
+      candidateError = __napiWasiResolveCandidate('./glu-script.wasi.cjs', false, ['./glu-script.wasm32-wasi.debug.wasm', './glu-script.wasm32-wasi.wasm'])
       candidateFailed = candidateError !== null
       if (!candidateFailed) {
-        wasiBinding = require('./lox-napi.wasi.cjs')
+        wasiBinding = require('./glu-script.wasi.cjs')
         nativeBinding = wasiBinding
         wasiBindingLoaded = true
       }
@@ -642,16 +642,16 @@ if (!nativeBinding || forceWasi) {
     let candidateError = null
     let candidateFailed = false
     try {
-      candidateError = __napiWasiResolveCandidate('lox-napi-wasm32-wasi', true, undefined)
+      candidateError = __napiWasiResolveCandidate('glu-script-wasm32-wasi', true, undefined)
       candidateFailed = candidateError !== null
       if (!candidateFailed) {
         if (process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
-          const bindingPackageVersion = require('lox-napi-wasm32-wasi/package.json').version
+          const bindingPackageVersion = require('glu-script-wasm32-wasi/package.json').version
           if (bindingPackageVersion !== '1.0.0') {
             throw new Error(`WASI binding package version mismatch, expected 1.0.0 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
         }
-        wasiBinding = require('lox-napi-wasm32-wasi')
+        wasiBinding = require('glu-script-wasm32-wasi')
         nativeBinding = wasiBinding
         wasiBindingLoaded = true
       }

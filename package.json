@@ -1,7 +1,7 @@
 {
-  "name": "lox-napi",
+  "name": "glu-script",
   "version": "1.0.0",
-  "description": "Template project for writing node package with napi-rs",
+  "description": "Repository for glu-script integration language",
   "main": "index.js",
   "repository": {
     "type": "git",
@@ -23,7 +23,7 @@
     "browser.js"
   ],
   "napi": {
-    "binaryName": "lox-napi",
+    "binaryName": "glu-script",
     "targets": [
       "wasm32-wasip1-threads"
     ]
