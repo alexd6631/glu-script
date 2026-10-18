@@ -1,6 +1,10 @@
-use std::{collections::HashMap, fmt, rc::Rc};
+use std::{
+  collections::HashMap,
+  fmt::{self, Debug},
+  rc::Rc,
+};
 
-use crate::core::{ast::ClosureNode, environment::Environment};
+use crate::core::{ast::ClosureNode, environment::Environment, evaluator::Evaluator};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
@@ -11,6 +15,7 @@ pub enum Value {
   List(Rc<Vec<Value>>),
   Object(Rc<HashMap<Rc<str>, Value>>),
   Closure(Closure),
+  Native(NativeFunction),
 }
 
 #[derive(Debug, Clone)]
@@ -22,6 +27,26 @@ pub struct Closure {
 impl PartialEq for Closure {
   fn eq(&self, other: &Self) -> bool {
     self.node == other.node && Rc::ptr_eq(&self.env, &other.env)
+  }
+}
+
+pub type NativeFn = dyn Fn(&mut Evaluator, &[Value]) -> Result<Value, String>;
+
+#[derive(Clone)]
+pub struct NativeFunction {
+  pub function: Rc<NativeFn>,
+  pub arity: u16,
+}
+
+impl Debug for NativeFunction {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    writeln!(f, "<native>")
+  }
+}
+
+impl PartialEq for NativeFunction {
+  fn eq(&self, other: &Self) -> bool {
+    Rc::ptr_eq(&self.function, &other.function) && self.arity == other.arity
   }
 }
 
@@ -52,7 +77,8 @@ impl fmt::Display for Value {
         }
         write!(f, "}}")
       }
-      Value::Closure(_) => write!(f, "closure"),
+      Value::Closure(_) => write!(f, "<closure>"),
+      Value::Native(_) => write!(f, "<native_fn>"),
     }
   }
 }

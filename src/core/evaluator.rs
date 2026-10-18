@@ -3,10 +3,11 @@ use std::{collections::HashMap, rc::Rc};
 use crate::core::{
   ast::{AstNode, AstObjectKey, BOpType, ClosureNode, IfNode, LOpType, UOpType},
   environment::Environment,
-  value::{Closure, Value},
+  stdlib::register_stdlib,
+  value::{Closure, NativeFunction, Value},
 };
 
-pub const MAX_CALL_DEPTH: usize = 1024;
+pub const MAX_CALL_DEPTH: usize = 256;
 
 pub struct Evaluator {
   environment: Rc<Environment>,
@@ -15,10 +16,16 @@ pub struct Evaluator {
 
 impl Evaluator {
   pub fn new() -> Self {
-    Self {
+    let evaluator = Self {
       environment: Rc::new(Environment::default()),
       call_depth: 0,
-    }
+    };
+    register_stdlib(&evaluator);
+    evaluator
+  }
+
+  pub fn register_native_function(&self, name: Rc<str>, f: NativeFunction) {
+    self.environment.set(name, Value::Native(f));
   }
 
   pub fn evaluate(&mut self, node: &AstNode) -> Result<Value, String> {
@@ -209,10 +216,23 @@ impl Evaluator {
   fn call(&mut self, callee: &AstNode, args: &[AstNode]) -> Result<Value, String> {
     let callee_value = self.evaluate(callee)?;
 
-    let Value::Closure(closure) = callee_value else {
-      return Err("Only closures can be called.".to_string());
-    };
+    let mut arg_values = Vec::with_capacity(args.len());
+    for arg in args {
+      arg_values.push(self.evaluate(arg)?);
+    }
 
+    match callee_value {
+      Value::Closure(closure) => self.call_closure(&closure, &arg_values),
+      Value::Native(native_function) => self.call_native(&native_function, &arg_values),
+      _ => Err("Only closures and native functions can be called.".to_string()),
+    }
+  }
+
+  pub(crate) fn call_closure(
+    &mut self,
+    closure: &Closure,
+    args: &[Value],
+  ) -> Result<Value, String> {
     if closure.node.params.len() != args.len() {
       return Err(format!(
         "Expected {} argument(s) but got {}.",
@@ -221,15 +241,10 @@ impl Evaluator {
       ));
     }
 
-    let mut arg_values = Vec::with_capacity(args.len());
-    for arg in args {
-      arg_values.push(self.evaluate(arg)?);
-    }
-
     let call_env = Rc::new(Environment::new(closure.env.clone()));
 
-    for (param, value) in closure.node.params.iter().zip(arg_values) {
-      call_env.set(param.clone(), value);
+    for (param, value) in closure.node.params.iter().zip(args) {
+      call_env.set(param.clone(), value.clone());
     }
 
     if self.call_depth >= MAX_CALL_DEPTH {
@@ -247,6 +262,17 @@ impl Evaluator {
 
     result
   }
+
+  fn call_native(&mut self, native: &NativeFunction, args: &[Value]) -> Result<Value, String> {
+    if native.arity as usize != args.len() {
+      return Err(format!(
+        "Expected {} argument(s) but got {}.",
+        native.arity,
+        args.len()
+      ));
+    }
+    (native.function)(self, args)
+  }
 }
 
 impl Default for Evaluator {
@@ -262,7 +288,7 @@ fn check_number(value: &Value) -> Result<f64, String> {
   }
 }
 
-fn is_truthy(value: &Value) -> bool {
+pub(crate) fn is_truthy(value: &Value) -> bool {
   !matches!(value, Value::Nil | Value::Bool(false))
 }
 
@@ -512,7 +538,7 @@ mod tests {
   #[test]
   fn closure_display() {
     let result = evaluate("|x| x").unwrap();
-    assert_eq!(result.to_string(), "closure");
+    assert_eq!(result.to_string(), "<closure>");
   }
 
   #[test]
@@ -590,7 +616,7 @@ mod tests {
   fn call_non_closure() {
     assert_eq!(
       evaluate("(1)(2)"),
-      Err("Only closures can be called.".to_string())
+      Err("Only closures and native functions can be called.".to_string())
     );
   }
 
@@ -656,5 +682,178 @@ mod tests {
       .unwrap()
       .join()
       .unwrap();
+  }
+
+  #[test]
+  fn test_call_native_function() {
+    assert_eq!(
+      evaluate("hello() + \" \" + hello()"),
+      Ok(Value::String("hello hello".into()))
+    );
+  }
+
+  #[test]
+  fn test_call_native_function_map() {
+    assert_eq!(
+      evaluate("{ let l = [1, 2, 3]; map(l, |n| n * 2)  }"),
+      evaluate("[2, 4, 6]")
+    );
+  }
+
+  #[test]
+  fn test_call_native_function_filter() {
+    assert_eq!(
+      evaluate("{ let l = [1, 2, 3, 4]; filter(l, |n| n > 2) }"),
+      evaluate("[3, 4]")
+    );
+  }
+
+  #[test]
+  fn test_call_native_function_filter_truthiness() {
+    assert_eq!(
+      evaluate(r#"{ let l = [1, 0, nil, "a", true, false]; filter(l, |n| n) }"#),
+      evaluate(r#"[1, 0, "a", true]"#)
+    );
+  }
+
+  #[test]
+  fn test_call_native_function_fold() {
+    assert_eq!(
+      evaluate("{ let l = [1, 2, 3]; fold(l, 10, |acc, n| acc + n) }"),
+      Ok(Value::Number(16.0))
+    );
+  }
+
+  #[test]
+  fn test_call_native_function_fold_strings() {
+    assert_eq!(
+      evaluate(r#"{ fold(["a", "b"], "", |acc, s| acc + s) }"#),
+      Ok(Value::String("ab".into()))
+    );
+  }
+
+  #[test]
+  fn test_call_native_function_reduce() {
+    assert_eq!(
+      evaluate("{ let l = [1, 2, 3]; reduce(l, |acc, n| acc + n) }"),
+      Ok(Value::Number(6.0))
+    );
+  }
+
+  #[test]
+  fn test_call_native_function_reduce_single_element() {
+    assert_eq!(
+      evaluate("{ let l = [7]; reduce(l, |acc, n| acc + n) }"),
+      Ok(Value::Number(7.0))
+    );
+  }
+
+  #[test]
+  fn test_call_native_function_reduce_empty() {
+    assert_eq!(
+      evaluate("{ reduce([], |acc, n| acc + n) }"),
+      Err("Cannot reduce an empty array.".to_string())
+    );
+  }
+
+  #[test]
+  fn test_call_native_function_filter_wrong_type() {
+    assert_eq!(
+      evaluate("filter(1, |n| n)"),
+      Err("Expected array".to_string())
+    );
+  }
+
+  #[test]
+  fn test_call_native_function_fold_wrong_type() {
+    assert_eq!(
+      evaluate("fold([], 0, 1)"),
+      Err("Expected closure".to_string())
+    );
+  }
+
+  #[test]
+  fn test_call_native_function_any() {
+    assert_eq!(
+      evaluate("{ let l = [1, 2, 3]; any(l, |n| n > 2) }"),
+      Ok(Value::Bool(true))
+    );
+  }
+
+  #[test]
+  fn test_call_native_function_any_false() {
+    assert_eq!(
+      evaluate("{ let l = [1, 2, 3]; any(l, |n| n > 5) }"),
+      Ok(Value::Bool(false))
+    );
+  }
+
+  #[test]
+  fn test_call_native_function_any_empty() {
+    assert_eq!(
+      evaluate("any([], |n| n > 0)"),
+      Ok(Value::Bool(false))
+    );
+  }
+
+  #[test]
+  fn test_call_native_function_every() {
+    assert_eq!(
+      evaluate("{ let l = [1, 2, 3]; every(l, |n| n > 0) }"),
+      Ok(Value::Bool(true))
+    );
+  }
+
+  #[test]
+  fn test_call_native_function_every_false() {
+    assert_eq!(
+      evaluate("{ let l = [1, 2, 3]; every(l, |n| n > 1) }"),
+      Ok(Value::Bool(false))
+    );
+  }
+
+  #[test]
+  fn test_call_native_function_every_empty() {
+    assert_eq!(
+      evaluate("every([], |n| n > 0)"),
+      Ok(Value::Bool(true))
+    );
+  }
+
+  #[test]
+  fn test_call_native_function_any_wrong_type() {
+    assert_eq!(
+      evaluate("any(1, |n| n)"),
+      Err("Expected array".to_string())
+    );
+  }
+
+  #[test]
+  fn test_call_native_function_find() {
+    assert_eq!(
+      evaluate("{ let l = [1, 2, 3]; find(l, |n| n > 1) }"),
+      Ok(Value::Number(2.0))
+    );
+  }
+
+  #[test]
+  fn test_call_native_function_find_first_match() {
+    assert_eq!(
+      evaluate("{ let l = [3, 2, 1]; find(l, |n| n > 1) }"),
+      Ok(Value::Number(3.0))
+    );
+  }
+
+  #[test]
+  fn test_call_native_function_find_no_match() {
+    assert_eq!(
+      evaluate("{ let l = [1, 2, 3]; find(l, |n| n > 5) }"),
+      Ok(Value::Nil)
+    );
+  }
+
+  #[test]
+  fn test_call_native_function_find_empty() {
+    assert_eq!(evaluate("find([], |n| n > 0)"), Ok(Value::Nil));
   }
 }
