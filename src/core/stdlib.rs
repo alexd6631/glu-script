@@ -24,7 +24,7 @@ pub fn register_stdlib(evaluator: &Evaluator) {
 
         let mut vec = Vec::new();
         for item in list.iter() {
-          vec.push(eval.call_closure(&closure, std::slice::from_ref(&item))?);
+          vec.push(eval.call_closure(&closure, std::slice::from_ref(item))?);
         }
 
         Ok(Value::List(Rc::new(vec)))
@@ -103,7 +103,7 @@ pub fn register_stdlib(evaluator: &Evaluator) {
         let (list, closure) = require_list_and_closure(args)?;
 
         for item in list.iter() {
-          if is_truthy(&eval.call_closure(&closure, std::slice::from_ref(&item))?) {
+          if is_truthy(&eval.call_closure(&closure, std::slice::from_ref(item))?) {
             return Ok(Value::Bool(true));
           }
         }
@@ -121,7 +121,7 @@ pub fn register_stdlib(evaluator: &Evaluator) {
         let (list, closure) = require_list_and_closure(args)?;
 
         for item in list.iter() {
-          if !is_truthy(&eval.call_closure(&closure, std::slice::from_ref(&item))?) {
+          if !is_truthy(&eval.call_closure(&closure, std::slice::from_ref(item))?) {
             return Ok(Value::Bool(false));
           }
         }
