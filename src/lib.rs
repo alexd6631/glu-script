@@ -28,7 +28,9 @@ pub fn test_parse(s: String) {
 pub fn test_evaluate(env: &Env, s: String) -> Result<Unknown<'_>> {
   let mut compiler = Compiler::new(&s);
   if let Some(ast) = compiler.compile() {
-    let res = futures::executor::block_on(Evaluator::new().evaluate(&ast)).map_err(|e| {
+    let mut evaluator = Evaluator::new();
+    let fut = std::pin::pin!(evaluator.evaluate_ref(&ast));
+    let res = futures::executor::block_on(fut).map_err(|e| {
       Error::new(
         Status::InvalidArg,
         format!("failed to evaluate expression: {e}"),
@@ -52,7 +54,9 @@ impl ToNapiValue for Value {
 pub async fn test_evaluate_async(s: String) -> Result<Value> {
   let mut compiler = Compiler::new(&s);
   if let Some(ast) = compiler.compile() {
-    Evaluator::new().evaluate(&ast).await.map_err(|e| {
+    let mut evaluator = Evaluator::new();
+    let fut = std::pin::pin!(evaluator.evaluate_ref(&ast));
+    fut.await.map_err(|e| {
       Error::new(
         Status::InvalidArg,
         format!("failed to evaluate expression: {e}"),

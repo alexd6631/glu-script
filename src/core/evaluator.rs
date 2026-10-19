@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, future::Future, sync::Arc};
 
 use crate::core::{
   ast::{AstNode, AstObjectKey, BOpType, ClosureNode, IfNode, LOpType, UOpType},
@@ -32,6 +32,16 @@ impl Evaluator {
     Box::pin(self.evaluate_inner(node))
   }
 
+  /// Stack-pinnable entry point: callers that drive the future directly
+  /// (e.g. with `std::pin::pin!` + `block_on`) can avoid the top-level
+  /// heap allocation of `evaluate`.
+  pub fn evaluate_ref<'a>(
+    &'a mut self,
+    node: &'a AstNode,
+  ) -> impl Future<Output = Result<Value, String>> + 'a {
+    self.evaluate_inner(node)
+  }
+
   async fn evaluate_inner(&mut self, node: &AstNode) -> Result<Value, String> {
     match node {
       AstNode::Literal(l) => Ok(l.clone()),
@@ -47,7 +57,7 @@ impl Evaluator {
       AstNode::VariableRef(id) => self.variable_ref(id).await,
       AstNode::If(node) => self.if_expression(node).await,
       AstNode::Closure(node) => self.closure(node.clone()).await,
-      AstNode::Call(callee, args) => self.call(callee, args).await,
+      AstNode::Call(callee, args) => Box::pin(self.call(callee, args)).await,
       AstNode::Error => Err("Invalid expression.".to_string()),
     }
   }
@@ -315,7 +325,8 @@ mod tests {
       .compile()
       .unwrap();
 
-    futures::executor::block_on(Evaluator::new().evaluate(&ast))
+    let mut evaluator = Evaluator::new();
+    futures::executor::block_on(std::pin::pin!(evaluator.evaluate_ref(&ast)))
   }
 
   #[test]
