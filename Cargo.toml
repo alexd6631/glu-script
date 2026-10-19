@@ -14,7 +14,7 @@ phf = { version = "0.14.0", features = ["macros"] }
 
 [dependencies.napi]
 version = "3.12.4"
-features = ["napi10"]
+features = ["napi10", "tokio_rt"]
 
 [build-dependencies]
 napi-build = "2.4.2"
