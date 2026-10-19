@@ -17,7 +17,9 @@ export interface Closure {
   env: Environment
 }
 
-export type NativeFn = (evaluator: Evaluator, args: GluValue[]) => GluValue
+export type MaybeAsync<T> = T | Promise<T>
+
+export type NativeFn = (evaluator: Evaluator, args: GluValue[]) => MaybeAsync<GluValue>
 
 export const nil: GluValue = { tag: 'nil' }
 export const bool = (value: boolean): GluValue => ({ tag: 'bool', value })
