@@ -1,4 +1,4 @@
-use std::{collections::HashMap, rc::Rc};
+use std::{collections::HashMap, sync::Arc};
 
 use crate::core::{
   ast::{AstNode, AstObjectKey, BOpType, ClosureNode, IfNode, LOpType, UOpType},
@@ -10,21 +10,21 @@ use crate::core::{
 pub const MAX_CALL_DEPTH: usize = 256;
 
 pub struct Evaluator {
-  environment: Rc<Environment>,
+  environment: Arc<Environment>,
   call_depth: usize,
 }
 
 impl Evaluator {
   pub fn new() -> Self {
     let evaluator = Self {
-      environment: Rc::new(Environment::default()),
+      environment: Arc::new(Environment::default()),
       call_depth: 0,
     };
     register_stdlib(&evaluator);
     evaluator
   }
 
-  pub fn register_native_function(&self, name: Rc<str>, f: NativeFunction) {
+  pub fn register_native_function(&self, name: Arc<str>, f: NativeFunction) {
     self.environment.set(name, Value::Native(f));
   }
 
@@ -48,13 +48,13 @@ impl Evaluator {
     }
   }
 
-  fn binding(&mut self, id: &Rc<str>, expr: &AstNode) -> Result<Value, String> {
+  fn binding(&mut self, id: &Arc<str>, expr: &AstNode) -> Result<Value, String> {
     let value = self.evaluate(expr)?;
     self.environment.set(id.clone(), value.clone());
     Ok(value)
   }
 
-  fn variable_ref(&mut self, id: &Rc<str>) -> Result<Value, String> {
+  fn variable_ref(&mut self, id: &Arc<str>) -> Result<Value, String> {
     self
       .environment
       .get(id)
@@ -129,7 +129,7 @@ impl Evaluator {
       values.push(self.evaluate(node)?);
     }
 
-    Ok(Value::List(Rc::new(values)))
+    Ok(Value::List(Arc::new(values)))
   }
 
   fn object(&mut self, entries: &[(AstObjectKey, AstNode)]) -> Result<Value, String> {
@@ -147,7 +147,7 @@ impl Evaluator {
       fields.insert(key, self.evaluate(value)?);
     }
 
-    Ok(Value::Object(Rc::new(fields)))
+    Ok(Value::Object(Arc::new(fields)))
   }
 
   fn index(&mut self, target: &AstNode, index: &AstNode) -> Result<Value, String> {
@@ -174,7 +174,7 @@ impl Evaluator {
     }
   }
 
-  fn property(&mut self, target: &AstNode, name: &Rc<str>) -> Result<Value, String> {
+  fn property(&mut self, target: &AstNode, name: &Arc<str>) -> Result<Value, String> {
     match self.evaluate(target)? {
       Value::Object(fields) => fields
         .get(name)
@@ -186,7 +186,7 @@ impl Evaluator {
 
   fn block(&mut self, nodes: &[AstNode]) -> Result<Value, String> {
     let enclosing = self.environment.clone();
-    self.environment = Rc::new(Environment::new(enclosing.clone()));
+    self.environment = Arc::new(Environment::new(enclosing.clone()));
 
     let mut result = Value::Nil;
 
@@ -208,7 +208,7 @@ impl Evaluator {
     }
   }
 
-  fn closure(&mut self, node: Rc<ClosureNode>) -> Result<Value, String> {
+  fn closure(&mut self, node: Arc<ClosureNode>) -> Result<Value, String> {
     let env = self.environment.clone();
     Ok(Value::Closure(Closure { node, env }))
   }
@@ -241,7 +241,7 @@ impl Evaluator {
       ));
     }
 
-    let call_env = Rc::new(Environment::new(closure.env.clone()));
+    let call_env = Arc::new(Environment::new(closure.env.clone()));
 
     for (param, value) in closure.node.params.iter().zip(args) {
       call_env.set(param.clone(), value.clone());
@@ -790,10 +790,7 @@ mod tests {
 
   #[test]
   fn test_call_native_function_any_empty() {
-    assert_eq!(
-      evaluate("any([], |n| n > 0)"),
-      Ok(Value::Bool(false))
-    );
+    assert_eq!(evaluate("any([], |n| n > 0)"), Ok(Value::Bool(false)));
   }
 
   #[test]
@@ -814,18 +811,12 @@ mod tests {
 
   #[test]
   fn test_call_native_function_every_empty() {
-    assert_eq!(
-      evaluate("every([], |n| n > 0)"),
-      Ok(Value::Bool(true))
-    );
+    assert_eq!(evaluate("every([], |n| n > 0)"), Ok(Value::Bool(true)));
   }
 
   #[test]
   fn test_call_native_function_any_wrong_type() {
-    assert_eq!(
-      evaluate("any(1, |n| n)"),
-      Err("Expected array".to_string())
-    );
+    assert_eq!(evaluate("any(1, |n| n)"), Err("Expected array".to_string()));
   }
 
   #[test]

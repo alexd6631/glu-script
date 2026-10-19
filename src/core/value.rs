@@ -1,7 +1,7 @@
 use std::{
   collections::HashMap,
   fmt::{self, Debug},
-  rc::Rc,
+  sync::Arc,
 };
 
 use crate::core::{ast::ClosureNode, environment::Environment, evaluator::Evaluator};
@@ -11,30 +11,30 @@ pub enum Value {
   Nil,
   Bool(bool),
   Number(f64),
-  String(Rc<str>),
-  List(Rc<Vec<Value>>),
-  Object(Rc<HashMap<Rc<str>, Value>>),
+  String(Arc<str>),
+  List(Arc<Vec<Value>>),
+  Object(Arc<HashMap<Arc<str>, Value>>),
   Closure(Closure),
   Native(NativeFunction),
 }
 
 #[derive(Debug, Clone)]
 pub struct Closure {
-  pub node: Rc<ClosureNode>,
-  pub env: Rc<Environment>,
+  pub node: Arc<ClosureNode>,
+  pub env: Arc<Environment>,
 }
 
 impl PartialEq for Closure {
   fn eq(&self, other: &Self) -> bool {
-    self.node == other.node && Rc::ptr_eq(&self.env, &other.env)
+    self.node == other.node && Arc::ptr_eq(&self.env, &other.env)
   }
 }
 
-pub type NativeFn = dyn Fn(&mut Evaluator, &[Value]) -> Result<Value, String>;
+pub type NativeFn = dyn Fn(&mut Evaluator, &[Value]) -> Result<Value, String> + Send + Sync;
 
 #[derive(Clone)]
 pub struct NativeFunction {
-  pub function: Rc<NativeFn>,
+  pub function: Arc<NativeFn>,
   pub arity: u16,
 }
 
@@ -46,7 +46,7 @@ impl Debug for NativeFunction {
 
 impl PartialEq for NativeFunction {
   fn eq(&self, other: &Self) -> bool {
-    Rc::ptr_eq(&self.function, &other.function) && self.arity == other.arity
+    Arc::ptr_eq(&self.function, &other.function) && self.arity == other.arity
   }
 }
 

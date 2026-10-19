@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::core::value::Value;
 
@@ -13,13 +13,13 @@ pub enum AstNode {
   Binary(BOpType, Box<AstNode>, Box<AstNode>),
   Logical(LOpType, Box<AstNode>, Box<AstNode>),
   Index(Box<AstNode>, Box<AstNode>),
-  Property(Box<AstNode>, Rc<str>),
+  Property(Box<AstNode>, Arc<str>),
 
-  Binding(Rc<str>, Box<AstNode>),
-  VariableRef(Rc<str>),
+  Binding(Arc<str>, Box<AstNode>),
+  VariableRef(Arc<str>),
 
   If(IfNode),
-  Closure(Rc<ClosureNode>),
+  Closure(Arc<ClosureNode>),
   Call(Box<AstNode>, Vec<AstNode>),
 
   Error,
@@ -34,13 +34,13 @@ pub struct IfNode {
 
 #[derive(Debug, PartialEq)]
 pub struct ClosureNode {
-  pub params: Vec<Rc<str>>,
+  pub params: Vec<Arc<str>>,
   pub body: Box<AstNode>,
 }
 
 #[derive(Debug, PartialEq)]
 pub enum AstObjectKey {
-  Literal(Rc<str>),
+  Literal(Arc<str>),
   Computed(AstNode),
 }
 

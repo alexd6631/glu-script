@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::core::{
   evaluator::{Evaluator, is_truthy},
@@ -11,7 +11,7 @@ pub fn register_stdlib(evaluator: &Evaluator) {
   evaluator.register_native_function(
     "hello".into(),
     NativeFunction {
-      function: Rc::new(|_, _| Ok(Value::String("hello".into()))),
+      function: Arc::new(|_, _| Ok(Value::String("hello".into()))),
       arity: 0,
     },
   );
@@ -19,7 +19,7 @@ pub fn register_stdlib(evaluator: &Evaluator) {
   evaluator.register_native_function(
     "map".into(),
     NativeFunction {
-      function: Rc::new(|eval, args| {
+      function: Arc::new(|eval, args| {
         let (list, closure) = require_list_and_closure(args)?;
 
         let mut vec = Vec::new();
@@ -27,7 +27,7 @@ pub fn register_stdlib(evaluator: &Evaluator) {
           vec.push(eval.call_closure(&closure, std::slice::from_ref(item))?);
         }
 
-        Ok(Value::List(Rc::new(vec)))
+        Ok(Value::List(Arc::new(vec)))
       }),
       arity: 2,
     },
@@ -36,7 +36,7 @@ pub fn register_stdlib(evaluator: &Evaluator) {
   evaluator.register_native_function(
     "filter".into(),
     NativeFunction {
-      function: Rc::new(|eval, args| {
+      function: Arc::new(|eval, args| {
         let (list, closure) = require_list_and_closure(args)?;
 
         let mut vec = Vec::new();
@@ -47,7 +47,7 @@ pub fn register_stdlib(evaluator: &Evaluator) {
           }
         }
 
-        Ok(Value::List(Rc::new(vec)))
+        Ok(Value::List(Arc::new(vec)))
       }),
       arity: 2,
     },
@@ -56,7 +56,7 @@ pub fn register_stdlib(evaluator: &Evaluator) {
   evaluator.register_native_function(
     "fold".into(),
     NativeFunction {
-      function: Rc::new(|eval, args| {
+      function: Arc::new(|eval, args| {
         let Value::List(list) = args[0].clone() else {
           return Err("Expected array".to_string());
         };
@@ -78,7 +78,7 @@ pub fn register_stdlib(evaluator: &Evaluator) {
   evaluator.register_native_function(
     "reduce".into(),
     NativeFunction {
-      function: Rc::new(|eval, args| {
+      function: Arc::new(|eval, args| {
         let (list, closure) = require_list_and_closure(args)?;
 
         let mut iter = list.iter();
@@ -99,7 +99,7 @@ pub fn register_stdlib(evaluator: &Evaluator) {
   evaluator.register_native_function(
     "any".into(),
     NativeFunction {
-      function: Rc::new(|eval, args| {
+      function: Arc::new(|eval, args| {
         let (list, closure) = require_list_and_closure(args)?;
 
         for item in list.iter() {
@@ -117,7 +117,7 @@ pub fn register_stdlib(evaluator: &Evaluator) {
   evaluator.register_native_function(
     "every".into(),
     NativeFunction {
-      function: Rc::new(|eval, args| {
+      function: Arc::new(|eval, args| {
         let (list, closure) = require_list_and_closure(args)?;
 
         for item in list.iter() {
@@ -135,7 +135,7 @@ pub fn register_stdlib(evaluator: &Evaluator) {
   evaluator.register_native_function(
     "find".into(),
     NativeFunction {
-      function: Rc::new(|eval, args| {
+      function: Arc::new(|eval, args| {
         let (list, closure) = require_list_and_closure(args)?;
 
         for item in list.iter().cloned() {
@@ -151,7 +151,7 @@ pub fn register_stdlib(evaluator: &Evaluator) {
   );
 }
 
-fn require_list_and_closure(args: &[Value]) -> Result<(Rc<Vec<Value>>, Closure), String> {
+fn require_list_and_closure(args: &[Value]) -> Result<(Arc<Vec<Value>>, Closure), String> {
   let Value::List(list) = args[0].clone() else {
     return Err("Expected array".to_string());
   };

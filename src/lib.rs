@@ -1,7 +1,7 @@
 #![deny(clippy::all)]
 pub mod core;
 
-use std::{collections::HashMap, rc::Rc};
+use std::{collections::HashMap, sync::Arc};
 
 use napi::{Env, Unknown, bindgen_prelude::*, sys};
 use napi_derive::napi;
@@ -41,11 +41,6 @@ pub fn test_evaluate(env: &Env, s: String) -> Result<Unknown<'_>> {
   }
 }
 
-// SAFETY: an evaluated `Value` is produced by a single-threaded evaluator and is
-// only moved through the napi deferred to the JS thread, never accessed
-// concurrently from multiple threads.
-unsafe impl Send for Value {}
-
 impl ToNapiValue for Value {
   unsafe fn to_napi_value(raw_env: sys::napi_env, v: Self) -> Result<sys::napi_value> {
     let env = Env::from_raw(raw_env);
@@ -83,7 +78,7 @@ fn to_js(v: Value, env: &Env) -> Result<Unknown<'_>> {
   Ok(js_value)
 }
 
-fn to_array(env: &Env, values: Rc<Vec<Value>>) -> Result<Unknown<'_>> {
+fn to_array(env: &Env, values: Arc<Vec<Value>>) -> Result<Unknown<'_>> {
   let mut array = env.create_array(values.len() as u32)?;
   for (i, obj) in values.iter().enumerate() {
     array.set(i as u32, to_js(obj.clone(), env)?)?;
@@ -91,7 +86,7 @@ fn to_array(env: &Env, values: Rc<Vec<Value>>) -> Result<Unknown<'_>> {
   array.into_unknown(env)
 }
 
-fn to_object(env: &Env, hash_map: Rc<HashMap<Rc<str>, Value>>) -> Result<Unknown<'_>> {
+fn to_object(env: &Env, hash_map: Arc<HashMap<Arc<str>, Value>>) -> Result<Unknown<'_>> {
   let mut object = Object::new(env)?;
   for (key, value) in hash_map.iter() {
     object.set(key.as_ref(), to_js(value.clone(), env)?)?;
