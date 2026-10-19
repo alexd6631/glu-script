@@ -16,7 +16,7 @@ export function isTruthy(value: GluValue): boolean {
   return !(value.tag === 'nil' || (value.tag === 'bool' && !value.value))
 }
 
-async function checkNumber(value: GluValue): Promise<number> {
+function checkNumber(value: GluValue): number {
   if (value.tag === 'number') {
     return value.value
   }
@@ -125,21 +125,21 @@ export class Evaluator {
         }
         throw new GluEvalError('Operands must be two numbers or two strings.')
       case 'sub':
-        return number((await checkNumber(lhs)) - (await checkNumber(rhs)))
+        return number(checkNumber(lhs) - checkNumber(rhs))
       case 'mul':
-        return number((await checkNumber(lhs)) * (await checkNumber(rhs)))
+        return number(checkNumber(lhs) * checkNumber(rhs))
       case 'div':
-        return number((await checkNumber(lhs)) / (await checkNumber(rhs)))
+        return number(checkNumber(lhs) / checkNumber(rhs))
       case 'mod':
-        return number((await checkNumber(lhs)) % (await checkNumber(rhs)))
+        return number(checkNumber(lhs) % checkNumber(rhs))
       case 'less':
-        return bool((await checkNumber(lhs)) < (await checkNumber(rhs)))
+        return bool(checkNumber(lhs) < checkNumber(rhs))
       case 'lessEqual':
-        return bool((await checkNumber(lhs)) <= (await checkNumber(rhs)))
+        return bool(checkNumber(lhs) <= checkNumber(rhs))
       case 'greater':
-        return bool((await checkNumber(lhs)) > (await checkNumber(rhs)))
+        return bool(checkNumber(lhs) > checkNumber(rhs))
       case 'greaterEqual':
-        return bool((await checkNumber(lhs)) >= (await checkNumber(rhs)))
+        return bool(checkNumber(lhs) >= checkNumber(rhs))
     }
     throw new GluEvalError(`Unknown binary operator '${op}'.`)
   }
