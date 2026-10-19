@@ -1,6 +1,8 @@
 use std::{
   collections::HashMap,
   fmt::{self, Debug},
+  future::Future,
+  pin::Pin,
   sync::Arc,
 };
 
@@ -30,12 +32,29 @@ impl PartialEq for Closure {
   }
 }
 
-pub type NativeFn = dyn Fn(&mut Evaluator, &[Value]) -> Result<Value, String> + Send + Sync;
+pub type NativeFuture<'a> = Pin<Box<dyn Future<Output = Result<Value, String>> + Send + 'a>>;
+pub type NativeFn = dyn for<'a> Fn(&'a mut Evaluator, Vec<Value>) -> NativeFuture<'a> + Send + Sync;
 
 #[derive(Clone)]
 pub struct NativeFunction {
   pub function: Arc<NativeFn>,
   pub arity: u16,
+}
+
+impl NativeFunction {
+  pub fn sync(
+    f: impl Fn(&mut Evaluator, &[Value]) -> Result<Value, String> + Send + Sync + 'static,
+  ) -> Self {
+    Self {
+      function: Arc::new(move |eval, args| Box::pin(std::future::ready(f(eval, &args)))),
+      arity: 0,
+    }
+  }
+
+  pub fn with_arity(mut self, arity: u16) -> Self {
+    self.arity = arity;
+    self
+  }
 }
 
 impl Debug for NativeFunction {

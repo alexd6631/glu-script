@@ -4,7 +4,7 @@ use crate::core::{
   ast::{AstNode, AstObjectKey, BOpType, ClosureNode, IfNode, LOpType, UOpType},
   environment::Environment,
   stdlib::register_stdlib,
-  value::{Closure, NativeFunction, Value},
+  value::{Closure, NativeFunction, NativeFuture, Value},
 };
 
 pub const MAX_CALL_DEPTH: usize = 256;
@@ -28,41 +28,45 @@ impl Evaluator {
     self.environment.set(name, Value::Native(f));
   }
 
-  pub fn evaluate(&mut self, node: &AstNode) -> Result<Value, String> {
+  pub fn evaluate<'a>(&'a mut self, node: &'a AstNode) -> NativeFuture<'a> {
+    Box::pin(self.evaluate_inner(node))
+  }
+
+  async fn evaluate_inner(&mut self, node: &AstNode) -> Result<Value, String> {
     match node {
       AstNode::Literal(l) => Ok(l.clone()),
-      AstNode::List(items) => self.list(items),
-      AstNode::Object(entries) => self.object(entries),
-      AstNode::Block(items) => self.block(items),
-      AstNode::Binary(op_type, left, right) => self.binary(*op_type, left, right),
-      AstNode::Logical(op_type, left, right) => self.logical(*op_type, left, right),
-      AstNode::Index(target, index) => self.index(target, index),
-      AstNode::Property(target, name) => self.property(target, name),
-      AstNode::Unary(op_type, ast_node) => self.unary(*op_type, ast_node),
-      AstNode::Binding(id, expr) => self.binding(id, expr),
-      AstNode::VariableRef(id) => self.variable_ref(id),
-      AstNode::If(node) => self.if_expression(node),
-      AstNode::Closure(node) => self.closure(node.clone()),
-      AstNode::Call(callee, args) => self.call(callee, args),
+      AstNode::List(items) => self.list(items).await,
+      AstNode::Object(entries) => self.object(entries).await,
+      AstNode::Block(items) => self.block(items).await,
+      AstNode::Binary(op_type, left, right) => self.binary(*op_type, left, right).await,
+      AstNode::Logical(op_type, left, right) => self.logical(*op_type, left, right).await,
+      AstNode::Index(target, index) => self.index(target, index).await,
+      AstNode::Property(target, name) => self.property(target, name).await,
+      AstNode::Unary(op_type, ast_node) => self.unary(*op_type, ast_node).await,
+      AstNode::Binding(id, expr) => self.binding(id, expr).await,
+      AstNode::VariableRef(id) => self.variable_ref(id).await,
+      AstNode::If(node) => self.if_expression(node).await,
+      AstNode::Closure(node) => self.closure(node.clone()).await,
+      AstNode::Call(callee, args) => self.call(callee, args).await,
       AstNode::Error => Err("Invalid expression.".to_string()),
     }
   }
 
-  fn binding(&mut self, id: &Arc<str>, expr: &AstNode) -> Result<Value, String> {
-    let value = self.evaluate(expr)?;
+  async fn binding(&mut self, id: &Arc<str>, expr: &AstNode) -> Result<Value, String> {
+    let value = self.evaluate(expr).await?;
     self.environment.set(id.clone(), value.clone());
     Ok(value)
   }
 
-  fn variable_ref(&mut self, id: &Arc<str>) -> Result<Value, String> {
+  async fn variable_ref(&mut self, id: &Arc<str>) -> Result<Value, String> {
     self
       .environment
       .get(id)
       .ok_or_else(|| format!("Undefined variable '{id}'."))
   }
 
-  fn unary(&mut self, op_type: UOpType, node: &AstNode) -> Result<Value, String> {
-    let value = self.evaluate(node)?;
+  async fn unary(&mut self, op_type: UOpType, node: &AstNode) -> Result<Value, String> {
+    let value = self.evaluate(node).await?;
 
     match op_type {
       UOpType::Not => Ok(Value::Bool(!is_truthy(&value))),
@@ -73,18 +77,18 @@ impl Evaluator {
     }
   }
 
-  fn logical(
+  async fn logical(
     &mut self,
     op_type: LOpType,
     left: &AstNode,
     right: &AstNode,
   ) -> Result<Value, String> {
-    let lhs = self.evaluate(left)?;
+    let lhs = self.evaluate(left).await?;
 
     match op_type {
       LOpType::And => {
         if is_truthy(&lhs) {
-          self.evaluate(right)
+          self.evaluate(right).await
         } else {
           Ok(lhs)
         }
@@ -93,15 +97,20 @@ impl Evaluator {
         if is_truthy(&lhs) {
           Ok(lhs)
         } else {
-          self.evaluate(right)
+          self.evaluate(right).await
         }
       }
     }
   }
 
-  fn binary(&mut self, op_type: BOpType, left: &AstNode, right: &AstNode) -> Result<Value, String> {
-    let lhs = self.evaluate(left)?;
-    let rhs = self.evaluate(right)?;
+  async fn binary(
+    &mut self,
+    op_type: BOpType,
+    left: &AstNode,
+    right: &AstNode,
+  ) -> Result<Value, String> {
+    let lhs = self.evaluate(left).await?;
+    let rhs = self.evaluate(right).await?;
 
     match op_type {
       BOpType::Equal => Ok(Value::Bool(lhs == rhs)),
@@ -122,37 +131,37 @@ impl Evaluator {
     }
   }
 
-  fn list(&mut self, nodes: &[AstNode]) -> Result<Value, String> {
+  async fn list(&mut self, nodes: &[AstNode]) -> Result<Value, String> {
     let mut values = Vec::with_capacity(nodes.len());
 
     for node in nodes {
-      values.push(self.evaluate(node)?);
+      values.push(self.evaluate(node).await?);
     }
 
     Ok(Value::List(Arc::new(values)))
   }
 
-  fn object(&mut self, entries: &[(AstObjectKey, AstNode)]) -> Result<Value, String> {
+  async fn object(&mut self, entries: &[(AstObjectKey, AstNode)]) -> Result<Value, String> {
     let mut fields = HashMap::with_capacity(entries.len());
 
     for (key, value) in entries {
       let key = match key {
         AstObjectKey::Literal(k) => k.clone(),
-        AstObjectKey::Computed(node) => match self.evaluate(node)? {
+        AstObjectKey::Computed(node) => match self.evaluate(node).await? {
           Value::String(s) => s,
           _ => return Err("Object keys must be strings.".to_string()),
         },
       };
 
-      fields.insert(key, self.evaluate(value)?);
+      fields.insert(key, self.evaluate(value).await?);
     }
 
     Ok(Value::Object(Arc::new(fields)))
   }
 
-  fn index(&mut self, target: &AstNode, index: &AstNode) -> Result<Value, String> {
-    let target = self.evaluate(target)?;
-    let index = self.evaluate(index)?;
+  async fn index(&mut self, target: &AstNode, index: &AstNode) -> Result<Value, String> {
+    let target = self.evaluate(target).await?;
+    let index = self.evaluate(index).await?;
 
     let idx = match index {
       Value::Number(n) if n >= 0.0 && n.fract() == 0.0 => n as usize,
@@ -174,8 +183,8 @@ impl Evaluator {
     }
   }
 
-  fn property(&mut self, target: &AstNode, name: &Arc<str>) -> Result<Value, String> {
-    match self.evaluate(target)? {
+  async fn property(&mut self, target: &AstNode, name: &Arc<str>) -> Result<Value, String> {
+    match self.evaluate(target).await? {
       Value::Object(fields) => fields
         .get(name)
         .cloned()
@@ -184,51 +193,51 @@ impl Evaluator {
     }
   }
 
-  fn block(&mut self, nodes: &[AstNode]) -> Result<Value, String> {
+  async fn block(&mut self, nodes: &[AstNode]) -> Result<Value, String> {
     let enclosing = self.environment.clone();
     self.environment = Arc::new(Environment::new(enclosing.clone()));
 
     let mut result = Value::Nil;
 
     for node in nodes {
-      result = self.evaluate(node)?;
+      result = self.evaluate(node).await?;
     }
 
     self.environment = enclosing;
     Ok(result)
   }
 
-  fn if_expression(&mut self, node: &IfNode) -> Result<Value, String> {
-    if is_truthy(&self.evaluate(&node.condition)?) {
-      self.evaluate(&node.then_branch)
+  async fn if_expression(&mut self, node: &IfNode) -> Result<Value, String> {
+    if is_truthy(&self.evaluate(&node.condition).await?) {
+      self.evaluate(&node.then_branch).await
     } else if let Some(else_branch) = &node.else_branch {
-      self.evaluate(else_branch)
+      self.evaluate(else_branch).await
     } else {
       Ok(Value::Nil)
     }
   }
 
-  fn closure(&mut self, node: Arc<ClosureNode>) -> Result<Value, String> {
+  async fn closure(&mut self, node: Arc<ClosureNode>) -> Result<Value, String> {
     let env = self.environment.clone();
     Ok(Value::Closure(Closure { node, env }))
   }
 
-  fn call(&mut self, callee: &AstNode, args: &[AstNode]) -> Result<Value, String> {
-    let callee_value = self.evaluate(callee)?;
+  async fn call(&mut self, callee: &AstNode, args: &[AstNode]) -> Result<Value, String> {
+    let callee_value = self.evaluate(callee).await?;
 
     let mut arg_values = Vec::with_capacity(args.len());
     for arg in args {
-      arg_values.push(self.evaluate(arg)?);
+      arg_values.push(self.evaluate(arg).await?);
     }
 
     match callee_value {
-      Value::Closure(closure) => self.call_closure(&closure, &arg_values),
-      Value::Native(native_function) => self.call_native(&native_function, &arg_values),
+      Value::Closure(closure) => self.call_closure(&closure, &arg_values).await,
+      Value::Native(native_function) => self.call_native(&native_function, &arg_values).await,
       _ => Err("Only closures and native functions can be called.".to_string()),
     }
   }
 
-  pub(crate) fn call_closure(
+  pub(crate) async fn call_closure(
     &mut self,
     closure: &Closure,
     args: &[Value],
@@ -255,7 +264,7 @@ impl Evaluator {
     self.environment = call_env;
 
     self.call_depth += 1;
-    let result = self.evaluate(&closure.node.body);
+    let result = Box::pin(self.evaluate(&closure.node.body)).await;
     self.call_depth -= 1;
 
     self.environment = saved_env;
@@ -263,7 +272,11 @@ impl Evaluator {
     result
   }
 
-  fn call_native(&mut self, native: &NativeFunction, args: &[Value]) -> Result<Value, String> {
+  async fn call_native(
+    &mut self,
+    native: &NativeFunction,
+    args: &[Value],
+  ) -> Result<Value, String> {
     if native.arity as usize != args.len() {
       return Err(format!(
         "Expected {} argument(s) but got {}.",
@@ -271,7 +284,8 @@ impl Evaluator {
         args.len()
       ));
     }
-    (native.function)(self, args)
+    let args = args.to_vec();
+    (native.function)(self, args).await
   }
 }
 
@@ -301,7 +315,7 @@ mod tests {
       .compile()
       .unwrap();
 
-    Evaluator::new().evaluate(&ast)
+    futures::executor::block_on(Evaluator::new().evaluate(&ast))
   }
 
   #[test]

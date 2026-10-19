@@ -3,9 +3,9 @@ use std::sync::{Arc, Mutex};
 
 #[derive(Clone)]
 pub struct Writers {
-  pub writer: Arc<Mutex<dyn Write>>,
-  pub err_writer: Arc<Mutex<dyn Write>>,
-  pub trace_writer: Arc<Mutex<dyn Write>>,
+  pub writer: Arc<Mutex<dyn Write + Send>>,
+  pub err_writer: Arc<Mutex<dyn Write + Send>>,
+  pub trace_writer: Arc<Mutex<dyn Write + Send>>,
 }
 
 impl Default for Writers {
