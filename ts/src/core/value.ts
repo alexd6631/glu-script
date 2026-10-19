@@ -26,8 +26,8 @@ export const str = (value: string): GluValue => ({ tag: 'string', value })
 export const list = (items: GluValue[]): GluValue => ({ tag: 'list', items })
 export const object = (fields: Map<string, GluValue>): GluValue => ({ tag: 'object', fields })
 
-export function valuesEqual(a: GluValue, b: GluValue): boolean {
-  if (a.tag !== b.tag) {
+export function valuesEqual(a: GluValue, _b: GluValue): boolean {
+  if (a.tag !== _b.tag) {
     return false
   }
   switch (a.tag) {
@@ -36,28 +36,31 @@ export function valuesEqual(a: GluValue, b: GluValue): boolean {
     case 'bool':
     case 'number':
     case 'string':
-      return a.value === (b as typeof a).value
-    case 'list':
-      return (
-        a.items.length === (b as typeof a).items.length &&
-        a.items.every((item, i) => valuesEqual(item, (b as typeof a).items[i]))
-      )
+      return a.value === (_b as typeof a).value
+    case 'list': {
+      const b = _b as typeof a
+      return a.items.length === b.items.length && a.items.every((item, i) => valuesEqual(item, b.items[i]))
+    }
     case 'object': {
-      const other = b as typeof a
-      if (a.fields.size !== other.fields.size) {
+      const b = _b as typeof a
+      if (a.fields.size !== b.fields.size) {
         return false
       }
       for (const [key, value] of a.fields) {
-        if (!other.fields.has(key) || !valuesEqual(value, other.fields.get(key)!)) {
+        if (!b.fields.has(key) || !valuesEqual(value, b.fields.get(key)!)) {
           return false
         }
       }
       return true
     }
-    case 'closure':
-      return a.closure.node === (b as typeof a).closure.node && a.closure.env === (b as typeof a).closure.env
-    case 'native':
-      return a.fn === (b as typeof a).fn && a.arity === (b as typeof a).arity
+    case 'closure': {
+      const b = _b as typeof a
+      return a.closure.node === b.closure.node && a.closure.env === b.closure.env
+    }
+    case 'native': {
+      const b = _b as typeof a
+      return a.fn === b.fn && a.arity === b.arity
+    }
   }
 }
 
