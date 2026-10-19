@@ -264,7 +264,7 @@ impl Evaluator {
     self.environment = call_env;
 
     self.call_depth += 1;
-    let result = Box::pin(self.evaluate(&closure.node.body)).await;
+    let result = self.evaluate(&closure.node.body).await;
     self.call_depth -= 1;
 
     self.environment = saved_env;
