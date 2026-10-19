@@ -1,0 +1,10 @@
+{
+  "name": "glu-script-ts",
+  "version": "0.0.1",
+  "description": "TypeScript port of the glu-script interpreter (experiment)",
+  "main": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc"
+  }
+}
