@@ -5,7 +5,7 @@ import type { AstNode } from './core/ast'
 import type { GluValue } from './core/value'
 
 export type { AstNode } from './core/ast'
-export type { GluValue, NativeFn } from './core/value'
+export type { GluValue, NativeFn, MaybeAsync } from './core/value'
 export type { Token } from './core/scanner'
 export { GluEvalError, Evaluator, MAX_CALL_DEPTH } from './core/evaluator'
 export { Scanner } from './core/scanner'
@@ -32,17 +32,17 @@ export function parse(source: string): AstNode {
   return ast
 }
 
-export function evaluate(source: string): unknown {
-  return toJs(evaluateValue(source))
+export async function evaluate(source: string): Promise<unknown> {
+  return toJs(await evaluateValue(source))
 }
 
-export function evaluateValue(source: string): GluValue {
+export async function evaluateValue(source: string): Promise<GluValue> {
   const ast = parse(source)
   return new Evaluator().evaluate(ast)
 }
 
-export function evaluateWith(evaluator: Evaluator, source: string): unknown {
-  return toJs(evaluator.evaluate(parse(source)))
+export async function evaluateWith(evaluator: Evaluator, source: string): Promise<unknown> {
+  return toJs(await evaluator.evaluate(parse(source)))
 }
 
 export function toJs(value: GluValue): unknown {

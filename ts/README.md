@@ -8,6 +8,7 @@ The port mirrors the Rust architecture module by module (`scanner` → `parser` 
 
 Behavior is ported faithfully (same error messages, truthiness rules, 256-frame call-depth limit, stdlib set: `hello`, `map`, `filter`, `fold`, `reduce`, `any`, `every`, `find`), with small ergonomic adaptations for JS consumers:
 
+- evaluation is **async**: `NativeFn` may return `GluValue | Promise<GluValue>`, the evaluator awaits at every step, and `evaluate`/`evaluateWith` return promises — so integrators can register promise-returning natives (I/O, network, timers) and scripts await them transparently
 - evaluation errors are thrown as `GluEvalError` instead of returned as `Result`
 - parse failures throw `GluParseError`
 - the public API converts values to plain JS (`toJs`), matching `lib.rs`
@@ -15,10 +16,18 @@ Behavior is ported faithfully (same error messages, truthiness rules, 256-frame 
 ## Usage
 
 ```ts
-import { evaluate, parse, scan } from './ts/src/index'
+import { evaluate, evaluateWith, Evaluator } from './ts/src/index'
 
-evaluate('{ let x = 5; x * 2 }') // 10
-evaluate('map([1, 2, 3], |x| x * 2)') // [2, 4, 6]
+await evaluate('{ let x = 5; x * 2 }') // 10
+await evaluate('map([1, 2, 3], |x| x * 2)') // [2, 4, 6]
+
+// async native functions
+const evaluator = new Evaluator()
+evaluator.registerNative('fetchUser', 1, async (_ev, args) => {
+  const res = await fetch(`/api/users/${(args[0] as { tag: 'number'; value: number }).value}`)
+  return { tag: 'string', value: await res.text() }
+})
+await evaluateWith(evaluator, '{ let u = fetchUser(42); u }')
 ```
 
 ## Dev

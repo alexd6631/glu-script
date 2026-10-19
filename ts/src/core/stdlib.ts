@@ -26,23 +26,24 @@ export function registerStdlib(evaluator: Evaluator): void {
   evaluator.registerNativeFunction('map', {
     tag: 'native',
     arity: 2,
-    fn: (evaluator, args) => {
+    fn: async (evaluator, args) => {
       const { list, closure } = requireListAndClosure(args)
-      return {
-        tag: 'list',
-        items: list.map((item) => evaluator.callClosure(closure, [item])),
+      const items: GluValue[] = []
+      for (const item of list) {
+        items.push(await evaluator.callClosure(closure, [item]))
       }
+      return { tag: 'list', items }
     },
   })
 
   evaluator.registerNativeFunction('filter', {
     tag: 'native',
     arity: 2,
-    fn: (evaluator, args) => {
+    fn: async (evaluator, args) => {
       const { list, closure } = requireListAndClosure(args)
       const items: GluValue[] = []
       for (const item of list) {
-        if (isTruthy(evaluator.callClosure(closure, [item]))) {
+        if (isTruthy(await evaluator.callClosure(closure, [item]))) {
           items.push(item)
         }
       }
@@ -53,7 +54,7 @@ export function registerStdlib(evaluator: Evaluator): void {
   evaluator.registerNativeFunction('fold', {
     tag: 'native',
     arity: 3,
-    fn: (evaluator, args) => {
+    fn: async (evaluator, args) => {
       if (args[0].tag !== 'list') {
         throw new Error('Expected array')
       }
@@ -62,7 +63,7 @@ export function registerStdlib(evaluator: Evaluator): void {
       }
       let acc = args[1]
       for (const item of args[0].items) {
-        acc = evaluator.callClosure(args[2].closure, [acc, item])
+        acc = await evaluator.callClosure(args[2].closure, [acc, item])
       }
       return acc
     },
@@ -71,7 +72,7 @@ export function registerStdlib(evaluator: Evaluator): void {
   evaluator.registerNativeFunction('reduce', {
     tag: 'native',
     arity: 2,
-    fn: (evaluator, args) => {
+    fn: async (evaluator, args) => {
       const { list, closure } = requireListAndClosure(args)
       const iter = list[Symbol.iterator]()
       const first = iter.next()
@@ -80,7 +81,7 @@ export function registerStdlib(evaluator: Evaluator): void {
       }
       let acc = first.value
       for (const item of iter) {
-        acc = evaluator.callClosure(closure, [acc, item])
+        acc = await evaluator.callClosure(closure, [acc, item])
       }
       return acc
     },
@@ -89,10 +90,10 @@ export function registerStdlib(evaluator: Evaluator): void {
   evaluator.registerNativeFunction('any', {
     tag: 'native',
     arity: 2,
-    fn: (evaluator, args) => {
+    fn: async (evaluator, args) => {
       const { list, closure } = requireListAndClosure(args)
       for (const item of list) {
-        if (isTruthy(evaluator.callClosure(closure, [item]))) {
+        if (isTruthy(await evaluator.callClosure(closure, [item]))) {
           return { tag: 'bool', value: true }
         }
       }
@@ -103,10 +104,10 @@ export function registerStdlib(evaluator: Evaluator): void {
   evaluator.registerNativeFunction('every', {
     tag: 'native',
     arity: 2,
-    fn: (evaluator, args) => {
+    fn: async (evaluator, args) => {
       const { list, closure } = requireListAndClosure(args)
       for (const item of list) {
-        if (!isTruthy(evaluator.callClosure(closure, [item]))) {
+        if (!isTruthy(await evaluator.callClosure(closure, [item]))) {
           return { tag: 'bool', value: false }
         }
       }
@@ -117,10 +118,10 @@ export function registerStdlib(evaluator: Evaluator): void {
   evaluator.registerNativeFunction('find', {
     tag: 'native',
     arity: 2,
-    fn: (evaluator, args) => {
+    fn: async (evaluator, args) => {
       const { list, closure } = requireListAndClosure(args)
       for (const item of list) {
-        if (isTruthy(evaluator.callClosure(closure, [item]))) {
+        if (isTruthy(await evaluator.callClosure(closure, [item]))) {
           return item
         }
       }
