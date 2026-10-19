@@ -81,7 +81,7 @@ impl<'a> Parser<'a> {
       return;
     }
     self.panic_mode = true;
-    let mut writer = self.writers.err_writer.borrow_mut();
+    let mut writer = self.writers.err_writer.lock().unwrap();
     write!(writer, "[line {}] Error", token.line).unwrap();
 
     match token.kind {

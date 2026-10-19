@@ -1,4 +1,7 @@
-use std::{collections::HashMap, rc::Rc, sync::OnceLock};
+use std::{
+  collections::HashMap,
+  sync::{Arc, OnceLock},
+};
 
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
@@ -317,7 +320,7 @@ impl<'a> Compiler<'a> {
 
     let body = self.expression();
 
-    AstNode::Closure(Rc::new(ClosureNode {
+    AstNode::Closure(Arc::new(ClosureNode {
       params,
       body: Box::new(body),
     }))
@@ -494,7 +497,7 @@ fn build_rules() -> HashMap<TokenType, ParseRule> {
 
 #[cfg(test)]
 mod tests {
-  use std::rc::Rc;
+  use std::sync::Arc;
 
   use crate::core::{
     ast::{AstNode, AstObjectKey, BOpType, ClosureNode, IfNode, LOpType, UOpType},
@@ -559,7 +562,7 @@ mod tests {
   }
 
   fn closure(params: &[&str], body: AstNode) -> AstNode {
-    AstNode::Closure(Rc::new(ClosureNode {
+    AstNode::Closure(Arc::new(ClosureNode {
       params: params.iter().map(|p| (*p).into()).collect(),
       body: Box::new(body),
     }))

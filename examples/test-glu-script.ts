@@ -6,33 +6,28 @@ function evaluate(s: string): unknown {
   return val;
 }
 
+async function evaluateAsync(s: string): Promise<unknown> {
+  const val = await m.testEvaluateAsync(s);
+  console.log(val);
+  return val;
+}
+
 evaluate("[1 +1 , 2 + 2, 3 * 4, [1, 2*2, 3*3]]");
 
-const res = evaluate(`
-{
- a: 1,
- b: 2 + 2,
- c: [1, 2, { nested: "val" + "ue" }]
-}
-`);
+const res = evaluate(`{ a: 1, b: 2 + 2, c: [1, 2, { nested: "val" + "ue" }]}`);
 console.log((res as any).c[2]);
 
-evaluate(`
-{
+evaluate(`{
   let a = 1;
   let b = 2;
-
   let obj = {
     add: a + b,
     mul: a * b
   };
-
   obj
-}
-`);
+}`);
 
-evaluate(`
-{
+evaluate(`{
   let obj = {
     a: {
       b: {
@@ -40,22 +35,16 @@ evaluate(`
       }
     }
   };
-
   obj.a.b.c * 2
 }`);
 
-
-evaluate(`
-{
+evaluate(`{
   let f = |x| x * 2;
   f(f(42))
-}
-`)
+}`)
 
-evaluate(`
-{
+evaluate(`{
   let fact = |n| if (n <= 1) 1 else n * fact(n - 1);
-
   [
     fact(1),
     fact(2),
@@ -64,35 +53,91 @@ evaluate(`
     fact(5),
     fact(6)
   ]
-}
-`)
+}`)
 
-
-
-evaluate(`
-{
+evaluate(`{
   let fa = |n| if (n == 0) true else fb(n - 1);
   let fb = |n| if (n == 0) false else fa(n - 1);
   let isEven = |n| fa(n);
-
   isEven(101)
-}
-`)
+}`)
 
-evaluate(`
-{
+evaluate(`{
   let adder = |n| |x| x + n;
   let addOne = adder(1);
   addOne(1)
-}
-`)
+}`)
 
-evaluate(`
-{
+evaluate(`{
   let fix = |f| |x| f(fix(f))(x);
   let fact_f = |f| |n| if (n <= 1) 1 else n * f(n - 1);
   let fact = fix(fact_f);
-
   fact(5)
+}`)
+
+async function main() {
+  await evaluateAsync("[1 +1 , 2 + 2, 3 * 4, [1, 2*2, 3*3]]");
+
+  const res = await evaluateAsync(`{ a: 1, b: 2 + 2, c: [1, 2, { nested: "val" + "ue" }]}`);
+  console.log((res as any).c[2]);
+
+  await evaluateAsync(`{
+    let a = 1;
+    let b = 2;
+    let obj = {
+      add: a + b,
+      mul: a * b
+    };
+    obj
+  }`);
+
+  await evaluateAsync(`{
+    let obj = {
+      a: {
+        b: {
+          c: 42
+        }
+      }
+    };
+    obj.a.b.c * 2
+  }`);
+
+  await evaluateAsync(`{
+    let f = |x| x * 2;
+    f(f(42))
+  }`)
+
+  await evaluateAsync(`{
+    let fact = |n| if (n <= 1) 1 else n * fact(n - 1);
+    [
+      fact(1),
+      fact(2),
+      fact(3),
+      fact(4),
+      fact(5),
+      fact(6)
+    ]
+  }`)
+
+  await evaluateAsync(`{
+    let fa = |n| if (n == 0) true else fb(n - 1);
+    let fb = |n| if (n == 0) false else fa(n - 1);
+    let isEven = |n| fa(n);
+    isEven(101)
+  }`)
+
+  await evaluateAsync(`{
+    let adder = |n| |x| x + n;
+    let addOne = adder(1);
+    addOne(1)
+  }`)
+
+  await evaluateAsync(`{
+    let fix = |f| |x| f(fix(f))(x);
+    let fact_f = |f| |n| if (n <= 1) 1 else n * f(n - 1);
+    let fact = fix(fact_f);
+    fact(5)
+  }`)
 }
-`)
+
+main();

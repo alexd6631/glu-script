@@ -1,15 +1,18 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{
+  collections::HashMap,
+  sync::{Arc, RwLock},
+};
 
 use crate::core::value::Value;
 
 #[derive(Debug, Default)]
 pub struct Environment {
-  enclosing: Option<Rc<Environment>>,
-  values: RefCell<HashMap<Rc<str>, Value>>,
+  enclosing: Option<Arc<Environment>>,
+  values: RwLock<HashMap<Arc<str>, Value>>,
 }
 
 impl Environment {
-  pub fn new(enclosing: Rc<Environment>) -> Self {
+  pub fn new(enclosing: Arc<Environment>) -> Self {
     Self {
       enclosing: Some(enclosing),
       values: Default::default(),
@@ -17,7 +20,7 @@ impl Environment {
   }
 
   pub fn get(&self, key: &str) -> Option<Value> {
-    if let Some(value) = self.values.borrow().get(key) {
+    if let Some(value) = self.values.read().unwrap().get(key) {
       Some(value.clone())
     } else if let Some(enclosing) = &self.enclosing {
       enclosing.get(key)
@@ -26,7 +29,7 @@ impl Environment {
     }
   }
 
-  pub fn set(&self, key: Rc<str>, value: Value) {
-    self.values.borrow_mut().insert(key, value);
+  pub fn set(&self, key: Arc<str>, value: Value) {
+    self.values.write().unwrap().insert(key, value);
   }
 }

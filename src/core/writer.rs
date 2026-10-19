@@ -1,20 +1,19 @@
-use std::cell::RefCell;
 use std::fmt::Write;
-use std::rc::Rc;
+use std::sync::{Arc, Mutex};
 
 #[derive(Clone)]
 pub struct Writers {
-  pub writer: Rc<RefCell<dyn Write>>,
-  pub err_writer: Rc<RefCell<dyn Write>>,
-  pub trace_writer: Rc<RefCell<dyn Write>>,
+  pub writer: Arc<Mutex<dyn Write + Send>>,
+  pub err_writer: Arc<Mutex<dyn Write + Send>>,
+  pub trace_writer: Arc<Mutex<dyn Write + Send>>,
 }
 
 impl Default for Writers {
   fn default() -> Self {
     Self {
-      writer: Rc::new(RefCell::new(StdoutWriter {})),
-      err_writer: Rc::new(RefCell::new(StderrWriter {})),
-      trace_writer: Rc::new(RefCell::new(StderrWriter {})),
+      writer: Arc::new(Mutex::new(StdoutWriter {})),
+      err_writer: Arc::new(Mutex::new(StderrWriter {})),
+      trace_writer: Arc::new(Mutex::new(StderrWriter {})),
     }
   }
 }

@@ -700,5 +700,6 @@ if (!nativeBinding) {
 
 module.exports = nativeBinding
 module.exports.testEvaluate = nativeBinding.testEvaluate
+module.exports.testEvaluateAsync = nativeBinding.testEvaluateAsync
 module.exports.testParse = nativeBinding.testParse
 module.exports.testScan = nativeBinding.testScan

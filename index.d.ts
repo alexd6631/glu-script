@@ -3,6 +3,8 @@
 
 export declare function testEvaluate(s: string): unknown
 
+export declare function testEvaluateAsync(s: string): Promise<unknown>
+
 export declare function testParse(s: string): void
 
 export declare function testScan(s: string): void
